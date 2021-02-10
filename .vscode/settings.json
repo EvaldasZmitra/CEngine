@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "cstdlib": "c",
+        "glew.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "cmath": "c",
+        "graphics.h": "c",
+        "string_view": "c",
+        "limits": "c"
+    }
+}
