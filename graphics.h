@@ -24,10 +24,18 @@ typedef struct Camera
     float farClipPlane;
 } Camera;
 
+typedef struct Entity
+{
+    char *name;
+    float *position;
+    float *rotation;
+    float *scale;
+    unsigned int *gpu_mesh;
+} Entity;
+
 GLFWwindow *create_window(int width, int height);
 
 void error_callback(int error, const char *description);
-char *read_file(char *file_name);
 
 unsigned int create_shader(const char *code, unsigned int type);
 unsigned int create_shader_program(unsigned int fragment_shader, unsigned int vertex_shader);
@@ -42,7 +50,8 @@ void draw_gpu_mesh(unsigned int *obj);
 void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name);
 
 Camera create_default_camera();
-void draw(unsigned int **shaded_meshes, int count, float *view_projection_m, GLFWwindow *window);
+void draw(Entity *entities, int count, float *view_projection_m, GLFWwindow *window);
 void load_shaded_mesh(unsigned int *out, char *vertex_shader_file, char *fragment_shader_file);
+Entity *load_entities_from_text(char *text, int *num_entities);
 
 #endif

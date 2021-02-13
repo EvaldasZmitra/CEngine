@@ -3,14 +3,19 @@
 #include "./include/GLFW/glfw3.h"
 #include "graphics.h"
 #include "util.h"
+#include "file_util.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 float *world_up = (float[]){0, 1, 0};
 int window_width = 500;
 int window_height = 500;
 
-void main_loop(GLFWwindow *window, unsigned int **shaded_meshes)
+void main_loop(
+    GLFWwindow *window,
+    Entity *entities,
+    int num_entities)
 {
     Camera camera = create_default_camera();
     camera.position = (float[]){0, 0, 10};
@@ -25,7 +30,7 @@ void main_loop(GLFWwindow *window, unsigned int **shaded_meshes)
     {
         view(camera.position, camera.forward, world_up, view_m);
         multiply_4x4_matrices(projection_m, view_m, view_projection_m);
-        draw(shaded_meshes, 1, view_projection_m, window);
+        draw(entities, num_entities, view_projection_m, window);
     }
 }
 
@@ -33,11 +38,10 @@ int main(int argc, char *argv[])
 {
     GLFWwindow *window = create_window(window_width, window_height);
 
-    unsigned int shaded_mesh[MAX_ATTRIBUTES] = {0};
-    load_shaded_mesh(shaded_mesh, "shader-vert.glsl", "shader-frag.glsl");
-    unsigned int *shaded_meshes[1] = {shaded_mesh};
-
-    main_loop(window, shaded_meshes);
+    char *text = read_file("entities.txt");
+    int num_entities = 0;
+    Entity *entities = load_entities_from_text(text, &num_entities);
+    main_loop(window, entities, num_entities);
 
     glfwTerminate();
     return 0;

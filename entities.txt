@@ -1,0 +1,9 @@
+1
+_entity_
+cube
+0 0 0
+0 0 0
+1 1 1
+a.obj
+shader-vert.glsl
+shader-frag.glsl

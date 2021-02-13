@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include "util.h"
+#include <string.h>
+#include "file_util.h"
 
 GLFWwindow *create_window(int width, int height)
 {
@@ -26,20 +28,6 @@ GLFWwindow *create_window(int width, int height)
 void error_callback(int error, const char *description)
 {
     fprintf(stderr, "Error: %s\n", description);
-}
-
-char *read_file(char *file_name)
-{
-    FILE *infile = fopen(file_name, "r");
-    char *buffer;
-    long numbytes;
-    fseek(infile, 0L, SEEK_END);
-    numbytes = ftell(infile);
-    fseek(infile, 0L, SEEK_SET);
-    buffer = (char *)calloc(numbytes, sizeof(char));
-    fread(buffer, sizeof(char), numbytes, infile);
-    fclose(infile);
-    return buffer;
 }
 
 unsigned int create_shader(const char *code, unsigned int type)
@@ -126,11 +114,11 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-void load_shaded_mesh(unsigned int *out, char *vertex_shader_file, char *fragment_shader_file)
+void load_shaded_mesh(unsigned int *out, char *vertex_shader_code, char *fragment_shader_code)
 {
     GLuint shader_program = create_shader_program_from_code(
-        read_file(vertex_shader_file),
-        read_file(fragment_shader_file));
+        vertex_shader_code,
+        fragment_shader_code);
     GLfloat vertices[] = {
         -1.0f, -1.0f, -1.0f, // triangle 1 : begin
         -1.0f, -1.0f, 1.0f,
@@ -174,15 +162,114 @@ void load_shaded_mesh(unsigned int *out, char *vertex_shader_file, char *fragmen
     free(vertices);
 }
 
-void draw(unsigned int **shaded_meshes, int count, float *view_projection_m, GLFWwindow *window)
+void draw(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
 {
     glfwPollEvents();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (int i = 0; i < count; i++)
     {
-        glUseProgram(shaded_meshes[i][SHADER]);
-        uniform_matrix_4x4(shaded_meshes[i][SHADER], view_projection_m, "VP");
-        draw_gpu_mesh(shaded_meshes[i]);
+        unsigned int *gpu_mesh = entities[i].gpu_mesh;
+        glUseProgram(gpu_mesh[SHADER]);
+        uniform_matrix_4x4(gpu_mesh[SHADER], view_projection_m, "VP");
+        draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
 }
+
+void load_vertices(char *file)
+{
+}
+
+Entity *load_entities_from_text(char *text, int *num_entities)
+{
+    char *token = strtok(text, "\n");
+    int n = atoi(token);
+    Entity *entities = malloc(sizeof(Entity) * n);
+    (*num_entities) = n;
+
+    int c = 0;
+    while (token != NULL)
+    {
+        if (strcmp(token, "_entity_") == 0)
+        {
+            char *name = strtok(NULL, "\n");
+
+            float *pos = malloc(3 * sizeof(float));
+            pos[0] = atof(strtok(NULL, " "));
+            pos[1] = atof(strtok(NULL, " "));
+            pos[2] = atof(strtok(NULL, "\n"));
+
+            float *rot = malloc(3 * sizeof(float));
+            rot[0] = atof(strtok(NULL, " "));
+            rot[1] = atof(strtok(NULL, " "));
+            rot[2] = atof(strtok(NULL, "\n"));
+
+            float *scale = malloc(3 * sizeof(float));
+            scale[0] = atof(strtok(NULL, " "));
+            scale[1] = atof(strtok(NULL, " "));
+            scale[2] = atof(strtok(NULL, "\n"));
+
+            char *mesh = strtok(NULL, "\n");
+            char *vshader = strtok(NULL, "\n");
+            char *fshader = strtok(NULL, "\n");
+
+            load_vertices(mesh);
+
+            unsigned int *shaded_mesh = malloc(MAX_ATTRIBUTES * sizeof(int));
+            load_shaded_mesh(
+                shaded_mesh,
+                read_file(vshader),
+                read_file(fshader));
+            entities[c] = (Entity){
+                .name = name,
+                .gpu_mesh = shaded_mesh,
+                .position = pos,
+                .rotation = rot,
+                .scale = scale};
+            c++;
+        }
+        token = strtok(NULL, "\n");
+    }
+    return entities;
+
+    // while (token != NULL)
+    // {
+    //     // char *token = strtok(text, "\n");
+    //     // char *name = strtok(token, ":");
+    //     // char *value = token;
+    //     char *name = strtok(NULL, ":");
+    //     char *value = strtok(NULL, "\n");
+    //     printf("%s, %s\n", name, value);
+    // }
+
+    // char *out;
+    // int out_size;
+    // int num_entities = 0;
+    // Entity *entities = malloc(sizeof(Entity) * num_entities);
+    // while (parse_file(text, out_size, out))
+    // {
+    //     float *position;
+    //     float *rotation;
+    //     float *scale;
+    //     float *mesh_file;
+    //     float *vertex_shader_file;
+    //     float *fragment_shader_file;
+    //     float *vertices;
+    //     unsigned int num_vertices;
+
+    //     float gpu_mesh[MAX_ATTRIBUTES] = {0};
+    //     create_gpu_mesh(vertices, num_vertices, gpu_mesh);
+    //     Entity entity = {
+    //         .gpu_mesh = gpu_mesh,
+    //         .position = position,
+    //         .rotation = position,
+    //         .scale = scale,
+    //     };
+    // }
+    return NULL;
+}
+
+// int *parse_file(char *file, int *out_size, char *out)
+// {
+//     return 0;
+// }
