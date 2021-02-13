@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 void set_4x4_matrix_position(float *matrix, float x, float y, float z)
 {
@@ -192,4 +193,86 @@ void view(float *pos, float *fwd, float *up, float *out)
     out[13] = 0;
     out[14] = 0;
     out[15] = 1;
+}
+
+void create_transform(float *position, float *rotation, float *scale, float *out)
+{
+    float scale_matrix[16] = {0};
+    float rotate_matrix[16] = {0};
+    float translate_matrix[16] = {0};
+    float quaternion[4] = {0};
+    set_4x4_matrix_scale(scale_matrix, 1.0f, 1.0f, 1.0f);
+    euler_to_quaternion(
+        (float[]){
+            rotation[0],
+            rotation[1],
+            rotation[2]},
+        quaternion);
+    quaterion_to_4x4_matrix(quaternion, rotate_matrix);
+    set_4x4_matrix_position(
+        translate_matrix,
+        position[0],
+        position[1],
+        position[2]);
+
+    float translate_rotate[16] = {0};
+    multiply_4x4_matrices(translate_matrix, rotate_matrix, translate_rotate);
+    multiply_4x4_matrices(translate_rotate, scale_matrix, out);
+}
+
+void create_mvp(
+    float *position,
+    float *rotation,
+    float *scale,
+    float *view_projection,
+    float *out)
+{
+    float transform[16] = {0};
+    create_transform(position, rotation, scale, transform);
+    multiply_4x4_matrices(view_projection, transform, out);
+}
+
+void load_dds(
+    const char *file,
+    unsigned int *width,
+    unsigned int *height,
+    unsigned int *linear_size,
+    unsigned int *mip_map_count,
+    unsigned int *format,
+    unsigned char *buffer,
+    unsigned int *buffer_size)
+{
+    unsigned char header[124];
+    FILE *fp;
+    fp = fopen(file, "rb");
+    char filecode[4];
+    fread(filecode, 1, 4, fp);
+    if (strncmp(filecode, "DDS ", 4) != 0)
+    {
+        fclose(fp);
+    }
+    fread(&header, 124, 1, fp);
+    (*height) = *(unsigned int *)&(header[8]);
+    (*width) = *(unsigned int *)&(header[12]);
+    (*linear_size) = *(unsigned int *)&(header[16]);
+    (*mip_map_count) = *(unsigned int *)&(header[24]);
+    (*format) = *(unsigned int *)&(header[80]);
+    (*buffer_size) = (*mip_map_count) > 1 ? (*linear_size) * 2 : (*linear_size);
+    buffer = (unsigned char *)malloc((*buffer_size) * sizeof(unsigned char));
+    fread(buffer, 1, (*buffer_size), fp);
+    fclose(fp);
+}
+
+char *read_file(char *file_name)
+{
+    FILE *infile = fopen(file_name, "r");
+    char *buffer;
+    long numbytes;
+    fseek(infile, 0L, SEEK_END);
+    numbytes = ftell(infile);
+    fseek(infile, 0L, SEEK_SET);
+    buffer = (char *)calloc(numbytes, sizeof(char));
+    fread(buffer, sizeof(char), numbytes, infile);
+    fclose(infile);
+    return buffer;
 }

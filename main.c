@@ -3,7 +3,6 @@
 #include "./include/GLFW/glfw3.h"
 #include "graphics.h"
 #include "util.h"
-#include "file_util.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,9 +17,22 @@ void main_loop(
     int num_entities)
 {
     Camera camera = create_default_camera();
-    camera.position = (float[]){0, 0, 10};
+    camera.position = (float[]){0, 0, 5};
     camera.forward = (float[]){0, 0, -1};
     camera.aspect = (float)window_width / (float)window_height;
+
+    unsigned int format, width, height, linear_size, mip_map_count, buffer_size;
+    unsigned char *buffer = NULL;
+    load_dds(
+        "brick.dds",
+        &width,
+        &height,
+        &linear_size,
+        &mip_map_count,
+        &format,
+        buffer,
+        &buffer_size);
+    load_dds_to_gpu(buffer, format, mip_map_count, width, height);
 
     float projection_m[16] = {0};
     float view_m[16] = {0};
@@ -30,7 +42,7 @@ void main_loop(
     {
         view(camera.position, camera.forward, world_up, view_m);
         multiply_4x4_matrices(projection_m, view_m, view_projection_m);
-        draw(entities, num_entities, view_projection_m, window);
+        draw_entities(entities, num_entities, view_projection_m, window);
     }
 }
 

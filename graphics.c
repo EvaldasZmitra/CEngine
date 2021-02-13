@@ -4,7 +4,6 @@
 #include <math.h>
 #include "util.h"
 #include <string.h>
-#include "file_util.h"
 
 GLFWwindow *create_window(int width, int height)
 {
@@ -163,38 +162,21 @@ void load_shaded_mesh(unsigned int *out, char *vertex_shader_code, char *fragmen
     free(vertices);
 }
 
-void draw(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
+void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
 {
     glfwPollEvents();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    float mvp[16] = {0};
     for (int i = 0; i < count; i++)
     {
         unsigned int *gpu_mesh = entities[i].gpu_mesh;
         glUseProgram(gpu_mesh[SHADER]);
-        float scale_matrix[16] = {0};
-        float rotate_matrix[16] = {0};
-        float translate_matrix[16] = {0};
-        float quaternion[4] = {0};
-        float mvp[16] = {0};
-        set_4x4_matrix_scale(scale_matrix, 1.0f, 1.0f, 1.0f);
-        euler_to_quaternion(
-            (float[]){
-                entities[i].rotation[0],
-                entities[i].rotation[1],
-                entities[i].rotation[2]},
-            quaternion);
-        quaterion_to_4x4_matrix(quaternion, rotate_matrix);
-        set_4x4_matrix_position(
-            translate_matrix,
-            entities[i].position[0],
-            entities[i].position[1],
-            entities[i].position[2]);
-
-        float translate_rotate[16] = {0};
-        float transform[16] = {0};
-        multiply_4x4_matrices(translate_matrix, rotate_matrix, translate_rotate);
-        multiply_4x4_matrices(translate_rotate, scale_matrix, transform);
-        multiply_4x4_matrices(view_projection_m, transform, mvp);
+        create_mvp(
+            entities[i].position,
+            entities[i].rotation,
+            entities[i].scale,
+            view_projection_m,
+            mvp);
         uniform_matrix_4x4(gpu_mesh[SHADER], mvp, "VP");
         draw_gpu_mesh(gpu_mesh);
     }
@@ -203,6 +185,53 @@ void draw(Entity *entities, int count, float *view_projection_m, GLFWwindow *win
 
 void load_vertices(char *file)
 {
+}
+
+unsigned int load_dds_to_gpu(
+    unsigned char *buffer,
+    unsigned int format,
+    unsigned int mip_map_count,
+    unsigned int width,
+    unsigned int height)
+{
+    switch (format)
+    {
+    case 0x31545844:
+        format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+        break;
+    case 0x33545844:
+        format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+        break;
+    case 0x35545844:
+        format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+        break;
+    default:
+        break;
+    }
+
+    unsigned int texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
+    unsigned int offset = 0;
+    for (unsigned int i = 0; i < mip_map_count; i++)
+    {
+        unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
+        glCompressedTexImage2D(
+            GL_TEXTURE_2D,
+            i,
+            format,
+            width,
+            height,
+            0,
+            size,
+            buffer + offset);
+        offset += size;
+        width /= 2;
+        height /= 2;
+    }
+    return texture_id;
 }
 
 Entity *load_entities_from_text(char *text, int *num_entities)
@@ -256,40 +285,4 @@ Entity *load_entities_from_text(char *text, int *num_entities)
         token = strtok(NULL, "\n");
     }
     return entities;
-
-    // while (token != NULL)
-    // {
-    //     // char *token = strtok(text, "\n");
-    //     // char *name = strtok(token, ":");
-    //     // char *value = token;
-    //     char *name = strtok(NULL, ":");
-    //     char *value = strtok(NULL, "\n");
-    //     printf("%s, %s\n", name, value);
-    // }
-
-    // char *out;
-    // int out_size;
-    // int num_entities = 0;
-    // Entity *entities = malloc(sizeof(Entity) * num_entities);
-    // while (parse_file(text, out_size, out))
-    // {
-    //     float *position;
-    //     float *rotation;
-    //     float *scale;
-    //     float *mesh_file;
-    //     float *vertex_shader_file;
-    //     float *fragment_shader_file;
-    //     float *vertices;
-    //     unsigned int num_vertices;
-
-    //     float gpu_mesh[MAX_ATTRIBUTES] = {0};
-    //     create_gpu_mesh(vertices, num_vertices, gpu_mesh);
-    //     Entity entity = {
-    //         .gpu_mesh = gpu_mesh,
-    //         .position = position,
-    //         .rotation = position,
-    //         .scale = scale,
-    //     };
-    // }
-    return NULL;
 }
