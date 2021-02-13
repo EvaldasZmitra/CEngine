@@ -4,9 +4,14 @@
 
 void set_4x4_matrix_position(float *matrix, float x, float y, float z)
 {
-    matrix[0] = x;
-    matrix[5] = y;
-    matrix[10] = z;
+    matrix[0] = 1;
+    matrix[5] = 1;
+    matrix[10] = 1;
+    matrix[15] = 1;
+
+    matrix[3] = x;
+    matrix[7] = y;
+    matrix[11] = z;
 }
 
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z)
@@ -14,6 +19,7 @@ void set_4x4_matrix_scale(float *matrix, float x, float y, float z)
     matrix[0] = x;
     matrix[5] = y;
     matrix[10] = z;
+    matrix[15] = z;
 }
 
 void quaterion_to_4x4_matrix(float *q, float *out)

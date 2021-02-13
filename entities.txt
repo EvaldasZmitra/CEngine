@@ -1,8 +1,17 @@
-1
+2
 _entity_
 cube
+-0.5 0 0
 0 0 0
-0 0 0
+1 1 1
+a.obj
+shader-vert.glsl
+shader-frag.glsl
+
+_entity_
+cube2
+3 0 0
+0 0.7875 0
 1 1 1
 a.obj
 shader-vert.glsl

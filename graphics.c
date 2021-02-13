@@ -21,6 +21,7 @@ GLFWwindow *create_window(int width, int height)
     glfwMakeContextCurrent(window);
     glewInit();
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
     glfwSwapInterval(1); //vsync
     return window;
 }
@@ -170,7 +171,31 @@ void draw(Entity *entities, int count, float *view_projection_m, GLFWwindow *win
     {
         unsigned int *gpu_mesh = entities[i].gpu_mesh;
         glUseProgram(gpu_mesh[SHADER]);
-        uniform_matrix_4x4(gpu_mesh[SHADER], view_projection_m, "VP");
+        float scale_matrix[16] = {0};
+        float rotate_matrix[16] = {0};
+        float translate_matrix[16] = {0};
+        float quaternion[4] = {0};
+        float mvp[16] = {0};
+        set_4x4_matrix_scale(scale_matrix, 1.0f, 1.0f, 1.0f);
+        euler_to_quaternion(
+            (float[]){
+                entities[i].rotation[0],
+                entities[i].rotation[1],
+                entities[i].rotation[2]},
+            quaternion);
+        quaterion_to_4x4_matrix(quaternion, rotate_matrix);
+        set_4x4_matrix_position(
+            translate_matrix,
+            entities[i].position[0],
+            entities[i].position[1],
+            entities[i].position[2]);
+
+        float translate_rotate[16] = {0};
+        float transform[16] = {0};
+        multiply_4x4_matrices(translate_matrix, rotate_matrix, translate_rotate);
+        multiply_4x4_matrices(translate_rotate, scale_matrix, transform);
+        multiply_4x4_matrices(view_projection_m, transform, mvp);
+        uniform_matrix_4x4(gpu_mesh[SHADER], mvp, "VP");
         draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
@@ -268,8 +293,3 @@ Entity *load_entities_from_text(char *text, int *num_entities)
     // }
     return NULL;
 }
-
-// int *parse_file(char *file, int *out_size, char *out)
-// {
-//     return 0;
-// }
