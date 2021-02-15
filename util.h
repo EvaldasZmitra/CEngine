@@ -56,7 +56,7 @@ void error_callback(int error, const char *description);
 unsigned int create_shader(const char *code, unsigned int type);
 unsigned int create_shader_program(unsigned int fragment_shader, unsigned int vertex_shader);
 unsigned int create_shader_program_from_code(const char *vertex_code, const char *fragment_code);
-unsigned int create_vbo(const float *data, int size, int stride, int type);
+unsigned int create_vbo(const void *data, int size, int stride, int type);
 void delete_gpu_mesh(unsigned int *mesh);
 void create_camera();
 void draw_gpu_mesh(unsigned int *obj);
@@ -71,10 +71,6 @@ void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
 void quaterion_to_4x4_matrix(float *q, float *out);
 void multiply_4x4_matrices(float *m1, float *m2, float *out);
 void print_4x4_matrix(float *m);
-
-/*
- * Pitch, yaw, roll
-*/
 void euler_to_quaternion(float *e, float *out);
 void quaternion_to_euler(float *q, float *out);
 float inverse_square_root(float number);
@@ -82,7 +78,6 @@ void normalize(float *v);
 void cross(float *v1, float *v2, float *out);
 void subtract(float *v1, float *v2);
 float dot(float *v1, float *v2);
-void m_mat(float *m, float *v);
 void project(float fov, float aspect, float zNear, float zFar, float *out);
 void view(float *pos, float *fwd, float *up, float *out);
 void create_transform(float *position, float *rotation, float *scale, float *out);

@@ -176,7 +176,7 @@ void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name)
     glUniformMatrix4fv(MatrixID, 1, GL_TRUE, matrix);
 }
 
-unsigned int create_vbo(const float *data, int size, int stride, int type)
+unsigned int create_vbo(const void *data, int size, int stride, int type)
 {
     unsigned int vertexbuffer;
     glGenBuffers(1, &vertexbuffer);
@@ -569,9 +569,8 @@ void create_mvp(
     multiply_4x4_matrices(view_projection, transform, out);
 }
 
-char *read_file(const char *file_name)
+char *read_file_stream(FILE *infile)
 {
-    FILE *infile = fopen(file_name, "r");
     char *buffer;
     long numbytes;
     fseek(infile, 0L, SEEK_END);
@@ -583,18 +582,21 @@ char *read_file(const char *file_name)
     return buffer;
 }
 
+char *read_file(const char *file_name)
+{
+    FILE *infile = fopen(file_name, "r");
+    return read_file_stream(infile);
+}
+
+char *read_file_binary(const char *file_name)
+{
+    FILE *infile = fopen(file_name, "rb");
+    return read_file_stream(infile);
+}
+
 Mesh read_mesh(const char *file)
 {
-    FILE *infile = fopen(file, "rb");
-    char *buffer;
-    long numbytes;
-    fseek(infile, 0L, SEEK_END);
-    numbytes = ftell(infile);
-    fseek(infile, 0L, SEEK_SET);
-    buffer = (char *)calloc(numbytes, sizeof(char));
-    fread(buffer, sizeof(char), numbytes, infile);
-    fclose(infile);
-
+    char *buffer = read_file_binary(file);
     Mesh mesh;
     unsigned int offset = 0;
     mesh.num_vertices = *(unsigned int *)&(buffer[offset]);
