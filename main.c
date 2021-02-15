@@ -25,19 +25,6 @@ int main(int argc, char *argv[])
     camera.forward = (float[]){0, 0, -1};
     camera.aspect = (float)window_width / (float)window_height;
 
-    unsigned int format, width, height, linear_size, mip_map_count, buffer_size;
-    unsigned char *buffer = NULL;
-    load_dds(
-        "brick.dds",
-        &width,
-        &height,
-        &linear_size,
-        &mip_map_count,
-        &format,
-        buffer,
-        &buffer_size);
-    load_dds_to_gpu(buffer, format, mip_map_count, width, height);
-
     float projection_m[16] = {0};
     float view_m[16] = {0};
     float view_projection_m[16] = {0};

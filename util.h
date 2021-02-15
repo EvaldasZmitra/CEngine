@@ -38,14 +38,13 @@ void create_mvp(
     float *scale,
     float *view_projection,
     float *out);
-void load_dds(
+unsigned char *load_dds(
     const char *file,
     unsigned int *width,
     unsigned int *height,
     unsigned int *linear_size,
     unsigned int *mip_map_count,
     unsigned int *format,
-    unsigned char *buffer,
     unsigned int *buffer_size);
 char *read_file(char *file_name);
 Mesh read_mesh(const char *file);

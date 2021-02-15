@@ -4,6 +4,162 @@
 #include <math.h>
 #include <string.h>
 
+GLuint loadBMP_custom(const char *imagepath)
+{
+
+    printf("Reading image %s\n", imagepath);
+    unsigned char header[54];
+    unsigned int dataPos;
+    unsigned int imageSize;
+    unsigned int width, height;
+    unsigned char *data;
+    FILE *file = fopen(imagepath, "rb");
+    if (!file)
+    {
+        printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath);
+        getchar();
+        return 0;
+    }
+    if (fread(header, 1, 54, file) != 54)
+    {
+        printf("Not a correct BMP file\n");
+        fclose(file);
+        return 0;
+    }
+    if (header[0] != 'B' || header[1] != 'M')
+    {
+        printf("Not a correct BMP file\n");
+        fclose(file);
+        return 0;
+    }
+    if (*(int *)&(header[0x1E]) != 0)
+    {
+        printf("Not a correct BMP file\n");
+        fclose(file);
+        return 0;
+    }
+    if (*(int *)&(header[0x1C]) != 24)
+    {
+        printf("Not a correct BMP file\n");
+        fclose(file);
+        return 0;
+    }
+    dataPos = *(int *)&(header[0x0A]);
+    imageSize = *(int *)&(header[0x22]);
+    width = *(int *)&(header[0x12]);
+    height = *(int *)&(header[0x16]);
+    if (imageSize == 0)
+        imageSize = width * height * 3;
+    if (dataPos == 0)
+        dataPos = 54;
+    data = malloc(sizeof(unsigned char) * imageSize);
+    fread(data, 1, imageSize, file);
+    fclose(file);
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    return textureID;
+}
+
+#define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
+#define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
+#define FOURCC_DXT5 0x35545844 // Equivalent to "DXT5" in ASCII
+
+GLuint loadDDS2(const char *path)
+{
+    // lay out variables to be used
+    unsigned char *header;
+
+    unsigned int width;
+    unsigned int height;
+    unsigned int mipMapCount;
+
+    unsigned int blockSize;
+    unsigned int format;
+
+    unsigned int w;
+    unsigned int h;
+
+    unsigned char *buffer = 0;
+    GLuint tid = 0;
+    FILE *f;
+    if ((f = fopen(path, "rb")) == 0)
+        return 0;
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    header = malloc(128);
+    fread(header, 1, 128, f);
+    if (memcmp(header, "DDS ", 4) != 0)
+    {
+    }
+
+    height = *(unsigned int *)&(header[12]);
+    width = *(unsigned int *)&(header[16]);
+    mipMapCount = (header[28]) | (header[29] << 8) | (header[30] << 16) | (header[31] << 24);
+
+    if (header[84] == 'D')
+    {
+        switch (header[87])
+        {
+        case '1': // DXT1
+            format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+            blockSize = 8;
+            break;
+        case '3': // DXT3
+            format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+            blockSize = 16;
+            break;
+        case '5': // DXT5
+            format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+            blockSize = 16;
+            break;
+        default:
+            break;
+        }
+    }
+    buffer = malloc(file_size - 128);
+    fread(buffer, 1, file_size, f);
+    glGenTextures(1, &tid);
+    glBindTexture(GL_TEXTURE_2D, tid);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount - 1); // opengl likes array length of mipmaps
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // don't forget to enable mipmaping
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    unsigned int offset = 0;
+    unsigned int size = 0;
+    w = width;
+    h = height;
+    for (unsigned int i = 0; i < mipMapCount; i++)
+    {
+        if (w == 0 || h == 0)
+        { // discard any odd mipmaps 0x1 0x2 resolutions
+            mipMapCount--;
+            continue;
+        }
+        size = ((w + 3) / 4) * ((h + 3) / 4) * blockSize;
+        glCompressedTexImage2D(GL_TEXTURE_2D, i, format, w, h, 0, size, buffer + offset);
+        offset += size;
+        w /= 2;
+        h /= 2;
+    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount - 1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    free(buffer);
+    free(header);
+    fclose(f);
+    return tid;
+}
+
 GLFWwindow *create_window(int width, int height)
 {
     glfwSetErrorCallback(error_callback);
@@ -34,6 +190,17 @@ unsigned int create_shader(const char *code, unsigned int type)
     unsigned int shaderId = glCreateShader(type);
     glShaderSource(shaderId, 1, &code, NULL);
     glCompileShader(shaderId);
+
+    GLint Result = GL_FALSE;
+    int InfoLogLength;
+    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &Result);
+    glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if (InfoLogLength > 0)
+    {
+        char *VertexShaderErrorMessage = malloc(sizeof(char) * InfoLogLength);
+        glGetShaderInfoLog(shaderId, InfoLogLength, NULL, VertexShaderErrorMessage);
+        printf("%s\n", &VertexShaderErrorMessage[0]);
+    }
     return shaderId;
 }
 
@@ -42,7 +209,19 @@ unsigned int create_shader_program(unsigned int fragment_shader, unsigned int ve
     unsigned int program_id = glCreateProgram();
     glAttachShader(program_id, vertex_shader);
     glAttachShader(program_id, fragment_shader);
+
     glLinkProgram(program_id);
+    GLint Result = GL_FALSE;
+    int InfoLogLength;
+    glGetProgramiv(program_id, GL_LINK_STATUS, &Result);
+    glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if (InfoLogLength > 0)
+    {
+        char *VertexShaderErrorMessage = malloc(sizeof(char) * InfoLogLength);
+        glGetProgramInfoLog(program_id, InfoLogLength, NULL, VertexShaderErrorMessage);
+        printf("%s\n", &VertexShaderErrorMessage[0]);
+    }
+
     glDetachShader(program_id, fragment_shader);
     glDetachShader(program_id, vertex_shader);
     return program_id;
@@ -143,6 +322,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
 {
     glfwPollEvents();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0, 0.2, 0.2, 1);
     float mvp[16] = {0};
     for (int i = 0; i < count; i++)
     {
@@ -155,6 +335,11 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
             view_projection_m,
             mvp);
         uniform_matrix_4x4(gpu_mesh[SHADER], mvp, "VP");
+        GLuint TextureID = glGetUniformLocation(gpu_mesh[SHADER], "myTextureSampler");
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, entities[i].texture);
+        glUniform1i(TextureID, 0);
+
         draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
@@ -167,44 +352,8 @@ unsigned int load_dds_to_gpu(
     unsigned int width,
     unsigned int height)
 {
-    switch (format)
-    {
-    case 0x31545844:
-        format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-        break;
-    case 0x33545844:
-        format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-        break;
-    case 0x35545844:
-        format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-        break;
-    default:
-        break;
-    }
 
-    unsigned int texture_id;
-    glGenTextures(1, &texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture_id);
-
-    unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
-    unsigned int offset = 0;
-    for (unsigned int i = 0; i < mip_map_count; i++)
-    {
-        unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
-        glCompressedTexImage2D(
-            GL_TEXTURE_2D,
-            i,
-            format,
-            width,
-            height,
-            0,
-            size,
-            buffer + offset);
-        offset += size;
-        width /= 2;
-        height /= 2;
-    }
-    return texture_id;
+    return loadDDS2("brick.DDS");
 }
 
 Entity *load_entities_from_text(char *text, int *num_entities)
@@ -237,10 +386,21 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             scale[2] = atof(strtok(NULL, "\n"));
 
             char *mesh_file = strtok(NULL, "\n");
+            char *texture_file = strtok(NULL, "\n");
             char *vshader = strtok(NULL, "\n");
             char *fshader = strtok(NULL, "\n");
 
             Mesh mesh = read_mesh(mesh_file);
+            unsigned int format, width, height, linear_size, mip_map_count, buffer_size;
+            unsigned char *buffer = load_dds(
+                texture_file,
+                &width,
+                &height,
+                &linear_size,
+                &mip_map_count,
+                &format,
+                &buffer_size);
+            unsigned int texture = load_dds_to_gpu(buffer, format, mip_map_count, width, height);
 
             unsigned int *shaded_mesh = (unsigned int *)malloc(MAX_ATTRIBUTES * sizeof(unsigned int));
             load_shaded_mesh(
@@ -249,6 +409,7 @@ Entity *load_entities_from_text(char *text, int *num_entities)
                 read_file(vshader),
                 read_file(fshader));
             entities[c] = (Entity){
+                .texture = texture,
                 .name = name,
                 .gpu_mesh = shaded_mesh,
                 .position = pos,

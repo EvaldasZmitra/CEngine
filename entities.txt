@@ -5,6 +5,7 @@ cube
 0 0 0
 1 1 1
 cube.mesh
+brick.dds
 shader-vert.glsl
 shader-frag.glsl
 
@@ -14,5 +15,6 @@ cube2
 0 0.7875 0
 1 1 1
 cube.mesh
+brick.dds
 shader-vert.glsl
 shader-frag.glsl

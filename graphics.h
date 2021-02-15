@@ -32,6 +32,7 @@ typedef struct Camera
 
 typedef struct Entity
 {
+    unsigned int texture;
     char *name;
     float *position;
     float *rotation;

@@ -233,14 +233,13 @@ void create_mvp(
     multiply_4x4_matrices(view_projection, transform, out);
 }
 
-void load_dds(
+unsigned char *load_dds(
     const char *file,
     unsigned int *width,
     unsigned int *height,
     unsigned int *linear_size,
     unsigned int *mip_map_count,
     unsigned int *format,
-    unsigned char *buffer,
     unsigned int *buffer_size)
 {
     unsigned char header[124];
@@ -259,9 +258,10 @@ void load_dds(
     (*mip_map_count) = *(unsigned int *)&(header[24]);
     (*format) = *(unsigned int *)&(header[80]);
     (*buffer_size) = (*mip_map_count) > 1 ? (*linear_size) * 2 : (*linear_size);
-    buffer = (unsigned char *)malloc((*buffer_size) * sizeof(unsigned char));
+    unsigned char *buffer = (unsigned char *)malloc((*buffer_size) * sizeof(unsigned char));
     fread(buffer, 1, (*buffer_size), fp);
     fclose(fp);
+    return buffer;
 }
 
 char *read_file(char *file_name)
