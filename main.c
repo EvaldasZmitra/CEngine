@@ -1,7 +1,6 @@
 #define GLEW_STATIC
 #include "./include/GL/glew.h"
 #include "./include/GLFW/glfw3.h"
-#include "graphics.h"
 #include "util.h"
 #include <math.h>
 #include <stdlib.h>
