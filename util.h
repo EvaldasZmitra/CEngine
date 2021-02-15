@@ -92,6 +92,6 @@ void create_mvp(
     float *scale,
     float *view_projection,
     float *out);
-char *read_file(char *file_name);
+char *read_file(const char *file_name);
 Mesh read_mesh(const char *file);
 #endif

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-GLuint loadDDS2(const char *path)
+GLuint load_dds(const char *path)
 {
     // lay out variables to be used
     unsigned char *header;
@@ -280,7 +280,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
 
 unsigned int load_dds_to_gpu(const char *file)
 {
-    return loadDDS2(file);
+    return load_dds(file);
 }
 
 Entity *load_entities_from_text(char *text, int *num_entities)
@@ -569,7 +569,7 @@ void create_mvp(
     multiply_4x4_matrices(view_projection, transform, out);
 }
 
-char *read_file(char *file_name)
+char *read_file(const char *file_name)
 {
     FILE *infile = fopen(file_name, "r");
     char *buffer;
