@@ -38,6 +38,7 @@ typedef struct Entity
     float *rotation;
     float *scale;
     unsigned int *gpu_mesh;
+    unsigned int shader;
 } Entity;
 
 typedef struct Mesh
@@ -63,7 +64,7 @@ void draw_gpu_mesh(unsigned int *obj);
 void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name);
 Camera create_default_camera();
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window);
-void load_shaded_mesh(unsigned int *out, Mesh mesh, char *vertex_shader_file, char *fragment_shader_file);
+void load_mesh_to_gpu(unsigned int *out, Mesh mesh);
 Entity *load_entities_from_text(char *text, int *num_entities);
 unsigned int load_dds_to_gpu();
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
@@ -74,12 +75,12 @@ void print_4x4_matrix(float *m);
 void euler_to_quaternion(float *e, float *out);
 void quaternion_to_euler(float *q, float *out);
 float inverse_square_root(float number);
-void normalize(float *v);
-void cross(float *v1, float *v2, float *out);
-void subtract(float *v1, float *v2);
-float dot(float *v1, float *v2);
-void project(float fov, float aspect, float zNear, float zFar, float *out);
-void view(float *pos, float *fwd, float *up, float *out);
+void normalize_vector3(float *v);
+void cross_vector3(float *v1, float *v2, float *out);
+void subtract_vector3(float *v1, float *v2);
+float dot_vector3(float *v1, float *v2);
+void create_projection(float fov, float aspect, float zNear, float zFar, float *out);
+void create_view(float *pos, float *fwd, float *up, float *out);
 void create_transform(float *position, float *rotation, float *scale, float *out);
 void create_mvp(
     float *position,

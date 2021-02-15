@@ -27,10 +27,10 @@ int main(int argc, char *argv[])
     float projection_m[16] = {0};
     float view_m[16] = {0};
     float view_projection_m[16] = {0};
-    project(camera.fov, camera.aspect, camera.nearClipPlane, camera.farClipPlane, projection_m);
+    create_projection(camera.fov, camera.aspect, camera.nearClipPlane, camera.farClipPlane, projection_m);
     while (!glfwWindowShouldClose(window))
     {
-        view(camera.position, camera.forward, world_up, view_m);
+        create_view(camera.position, camera.forward, world_up, view_m);
         multiply_4x4_matrices(projection_m, view_m, view_projection_m);
         draw_entities(entities, num_entities, view_projection_m, window);
     }

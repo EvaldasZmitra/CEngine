@@ -4,38 +4,42 @@
 #include <stdio.h>
 #include <string.h>
 
-GLuint load_dds(const char *path)
+char *read_file_stream(FILE *infile)
 {
-    // lay out variables to be used
-    unsigned char *header;
+    char *buffer;
+    long numbytes;
+    fseek(infile, 0L, SEEK_END);
+    numbytes = ftell(infile);
+    fseek(infile, 0L, SEEK_SET);
+    buffer = (char *)calloc(numbytes, sizeof(char));
+    fread(buffer, sizeof(char), numbytes, infile);
+    fclose(infile);
+    return buffer;
+}
 
-    unsigned int width;
-    unsigned int height;
-    unsigned int mipMapCount;
+char *read_file(const char *file_name)
+{
+    FILE *infile = fopen(file_name, "r");
+    return read_file_stream(infile);
+}
 
-    unsigned int blockSize;
-    unsigned int format;
+char *read_file_binary(const char *file_name)
+{
+    FILE *infile = fopen(file_name, "rb");
+    return read_file_stream(infile);
+}
 
-    unsigned int w;
-    unsigned int h;
+unsigned int load_dds(const char *path)
+{
+    unsigned int width, height, mip_map_count, block_size, format;
+    unsigned char *data = (unsigned char *)read_file_binary(path);
+    unsigned char *header = (unsigned char *)&(data[0]);
+    unsigned char *buffer = (unsigned char *)&(data[128]);
 
-    unsigned char *buffer = 0;
     GLuint tid = 0;
-    FILE *f;
-    if ((f = fopen(path, "rb")) == 0)
-        return 0;
-    fseek(f, 0, SEEK_END);
-    long file_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    header = malloc(128);
-    fread(header, 1, 128, f);
-    if (memcmp(header, "DDS ", 4) != 0)
-    {
-    }
-
     height = *(unsigned int *)&(header[12]);
     width = *(unsigned int *)&(header[16]);
-    mipMapCount = (header[28]) | (header[29] << 8) | (header[30] << 16) | (header[31] << 24);
+    mip_map_count = (header[28]) | (header[29] << 8) | (header[30] << 16) | (header[31] << 24);
 
     if (header[84] == 'D')
     {
@@ -43,26 +47,24 @@ GLuint load_dds(const char *path)
         {
         case '1': // DXT1
             format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-            blockSize = 8;
+            block_size = 8;
             break;
         case '3': // DXT3
             format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-            blockSize = 16;
+            block_size = 16;
             break;
         case '5': // DXT5
             format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-            blockSize = 16;
+            block_size = 16;
             break;
         default:
             break;
         }
     }
-    buffer = malloc(file_size - 128);
-    fread(buffer, 1, file_size, f);
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount - 1); // opengl likes array length of mipmaps
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_map_count - 1); // opengl likes array length of mipmaps
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // don't forget to enable mipmaping
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -70,32 +72,29 @@ GLuint load_dds(const char *path)
 
     unsigned int offset = 0;
     unsigned int size = 0;
-    w = width;
-    h = height;
-    for (unsigned int i = 0; i < mipMapCount; i++)
+    unsigned int w = width;
+    unsigned int h = height;
+    for (unsigned int i = 0; i < mip_map_count; i++)
     {
         if (w == 0 || h == 0)
-        { // discard any odd mipmaps 0x1 0x2 resolutions
-            mipMapCount--;
+        {
+            mip_map_count--;
             continue;
         }
-        size = ((w + 3) / 4) * ((h + 3) / 4) * blockSize;
+        size = ((w + 3) / 4) * ((h + 3) / 4) * block_size;
         glCompressedTexImage2D(GL_TEXTURE_2D, i, format, w, h, 0, size, buffer + offset);
         offset += size;
         w /= 2;
         h /= 2;
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapCount - 1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_map_count - 1);
     glBindTexture(GL_TEXTURE_2D, 0);
-    free(buffer);
-    free(header);
-    fclose(f);
+    free(data);
     return tid;
 }
 
 GLFWwindow *create_window(int width, int height)
 {
-    glfwSetErrorCallback(error_callback);
     if (!glfwInit())
     {
         return 0;
@@ -111,11 +110,6 @@ GLFWwindow *create_window(int width, int height)
     glDepthFunc(GL_LESS);
     glfwSwapInterval(1); //vsync
     return window;
-}
-
-void error_callback(int error, const char *description)
-{
-    fprintf(stderr, "Error: %s\n", description);
 }
 
 unsigned int create_shader(const char *code, unsigned int type)
@@ -217,13 +211,8 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-void load_shaded_mesh(unsigned int *out, Mesh mesh, char *vertex_shader_code, char *fragment_shader_code)
+void load_mesh_to_gpu(unsigned int *out, Mesh mesh)
 {
-    GLuint shader_program = create_shader_program_from_code(
-        vertex_shader_code,
-        fragment_shader_code);
-    out[SHADER] = shader_program;
-
     glGenVertexArrays(1, &out[VAO]);
     glBindVertexArray(out[VAO]);
     out[VBO_VERTEX] = create_vbo(
@@ -246,7 +235,11 @@ void load_shaded_mesh(unsigned int *out, Mesh mesh, char *vertex_shader_code, ch
 
     glGenBuffers(1, &out[VBO_INDICES]);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out[VBO_INDICES]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.num_indices * 3 * sizeof(unsigned int), mesh.indices, GL_STATIC_DRAW);
+    glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER,
+        mesh.num_indices * 3 * sizeof(unsigned int),
+        mesh.indices,
+        GL_STATIC_DRAW);
     out[NUM_VERTICES] = mesh.num_vertices;
     out[NUM_INDICES] = mesh.num_indices * 3;
 }
@@ -276,11 +269,6 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
         draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
-}
-
-unsigned int load_dds_to_gpu(const char *file)
-{
-    return load_dds(file);
 }
 
 Entity *load_entities_from_text(char *text, int *num_entities)
@@ -318,21 +306,23 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             char *fshader = strtok(NULL, "\n");
 
             Mesh mesh = read_mesh(mesh_file);
-            unsigned int texture = load_dds_to_gpu(texture_file);
+            unsigned int texture = load_dds(texture_file);
 
             unsigned int *shaded_mesh = (unsigned int *)malloc(MAX_ATTRIBUTES * sizeof(unsigned int));
-            load_shaded_mesh(
-                shaded_mesh,
-                mesh,
+            load_mesh_to_gpu(shaded_mesh, mesh);
+            unsigned int shader_program = create_shader_program_from_code(
                 read_file(vshader),
                 read_file(fshader));
+            shaded_mesh[SHADER] = shader_program;
+
             entities[c] = (Entity){
                 .texture = texture,
                 .name = name,
                 .gpu_mesh = shaded_mesh,
                 .position = pos,
                 .rotation = rot,
-                .scale = scale};
+                .scale = scale,
+                .shader = shader_program};
             c++;
         }
         token = strtok(NULL, "\n");
@@ -466,7 +456,7 @@ float inverse_square_root(float number)
     return y;
 }
 
-void normalize(float *v)
+void normalize_vector3(float *v)
 {
     float sum = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
     float f = inverse_square_root(sum);
@@ -475,14 +465,14 @@ void normalize(float *v)
     v[2] *= f;
 }
 
-void cross(float *v1, float *v2, float *out)
+void cross_vector3(float *v1, float *v2, float *out)
 {
     out[0] = v1[1] * v2[2] - v1[2] * v2[1];
     out[1] = v1[2] * v2[0] - v1[0] * v2[2];
     out[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
-void subtract(float *v1, float *v2)
+void subtract_vector3(float *v1, float *v2)
 {
     v1[0] -= v2[0];
     v1[1] -= v2[1];
@@ -490,12 +480,12 @@ void subtract(float *v1, float *v2)
     v1[3] -= v2[3];
 }
 
-float dot(float *v1, float *v2)
+float dot_vector3(float *v1, float *v2)
 {
     return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
-void project(float fov, float aspect, float zNear, float zFar, float *out)
+void create_projection(float fov, float aspect, float zNear, float zFar, float *out)
 {
     float r = zFar - zNear;
     out[0] = 1.0f / (tan(fov / 2.0f) * aspect);
@@ -505,26 +495,26 @@ void project(float fov, float aspect, float zNear, float zFar, float *out)
     out[11] = -(2 * zNear * zFar) / r;
 }
 
-void view(float *pos, float *fwd, float *up, float *out)
+void create_view(float *pos, float *fwd, float *up, float *out)
 {
     float right[] = {0, 0, 0};
-    cross(fwd, up, right);
-    cross(right, fwd, up);
+    cross_vector3(fwd, up, right);
+    cross_vector3(right, fwd, up);
 
     out[0] = right[0];
     out[1] = right[1];
     out[2] = right[2];
-    out[3] = -dot(right, pos);
+    out[3] = -dot_vector3(right, pos);
 
     out[4] = up[0];
     out[5] = up[1];
     out[6] = up[2];
-    out[7] = -dot(up, pos);
+    out[7] = -dot_vector3(up, pos);
 
     out[8] = fwd[0];
     out[9] = fwd[1];
     out[10] = fwd[2];
-    out[11] = dot(fwd, pos);
+    out[11] = dot_vector3(fwd, pos);
 
     out[12] = 0;
     out[13] = 0;
@@ -567,31 +557,6 @@ void create_mvp(
     float transform[16] = {0};
     create_transform(position, rotation, scale, transform);
     multiply_4x4_matrices(view_projection, transform, out);
-}
-
-char *read_file_stream(FILE *infile)
-{
-    char *buffer;
-    long numbytes;
-    fseek(infile, 0L, SEEK_END);
-    numbytes = ftell(infile);
-    fseek(infile, 0L, SEEK_SET);
-    buffer = (char *)calloc(numbytes, sizeof(char));
-    fread(buffer, sizeof(char), numbytes, infile);
-    fclose(infile);
-    return buffer;
-}
-
-char *read_file(const char *file_name)
-{
-    FILE *infile = fopen(file_name, "r");
-    return read_file_stream(infile);
-}
-
-char *read_file_binary(const char *file_name)
-{
-    FILE *infile = fopen(file_name, "rb");
-    return read_file_stream(infile);
 }
 
 Mesh read_mesh(const char *file)
