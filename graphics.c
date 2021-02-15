@@ -159,7 +159,6 @@ void load_shaded_mesh(unsigned int *out, char *vertex_shader_code, char *fragmen
     out[SHADER] = shader_program;
     unsigned int num_vertices = sizeof(vertices) / sizeof(vertices[0]) / 3;
     create_gpu_mesh(vertices, num_vertices, out);
-    free(vertices);
 }
 
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
@@ -169,6 +168,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     float mvp[16] = {0};
     for (int i = 0; i < count; i++)
     {
+        Entity e = entities[i];
         unsigned int *gpu_mesh = entities[i].gpu_mesh;
         glUseProgram(gpu_mesh[SHADER]);
         create_mvp(
