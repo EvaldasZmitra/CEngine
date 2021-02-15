@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "util.h"
 #include <string.h>
 
 GLFWwindow *create_window(int width, int height)
@@ -76,18 +75,6 @@ unsigned int create_vbo(const float *data, int size, int stride, int type)
     return vertexbuffer;
 }
 
-void create_gpu_mesh(const float *vertices, int num_vertices, unsigned int *out)
-{
-    glGenVertexArrays(1, &out[VAO]);
-    glBindVertexArray(out[VAO]);
-    out[VBO_VERTEX] = create_vbo(
-        vertices,
-        num_vertices * 3 * sizeof(float),
-        3,
-        VBO_VERTEX);
-    out[NUM_VERTICES] = num_vertices;
-}
-
 void delete_gpu_mesh(unsigned int *mesh)
 {
     for (int i = 0; i < MAX_VBOS; i++)
@@ -100,7 +87,11 @@ void delete_gpu_mesh(unsigned int *mesh)
 void draw_gpu_mesh(unsigned int *obj)
 {
     glBindVertexArray(obj[VAO]);
-    glDrawArrays(GL_TRIANGLES, 0, obj[NUM_VERTICES]);
+    glDrawElements(
+        GL_TRIANGLES,
+        obj[NUM_INDICES],
+        GL_UNSIGNED_INT,
+        (void *)0);
 }
 
 Camera create_default_camera()
@@ -114,51 +105,38 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-void load_shaded_mesh(unsigned int *out, char *vertex_shader_code, char *fragment_shader_code)
+void load_shaded_mesh(unsigned int *out, Mesh mesh, char *vertex_shader_code, char *fragment_shader_code)
 {
     GLuint shader_program = create_shader_program_from_code(
         vertex_shader_code,
         fragment_shader_code);
-    GLfloat vertices[] = {
-        -1.0f, -1.0f, -1.0f, // triangle 1 : begin
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f, // triangle 1 : end
-        1.0f, 1.0f, -1.0f, // triangle 2 : begin
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f, // triangle 2 : end
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f};
     out[SHADER] = shader_program;
-    unsigned int num_vertices = sizeof(vertices) / sizeof(vertices[0]) / 3;
-    create_gpu_mesh(vertices, num_vertices, out);
+
+    glGenVertexArrays(1, &out[VAO]);
+    glBindVertexArray(out[VAO]);
+    out[VBO_VERTEX] = create_vbo(
+        mesh.vertices,
+        mesh.num_vertices * 3 * sizeof(float),
+        3,
+        VBO_VERTEX);
+
+    out[VBO_NORMAL] = create_vbo(
+        mesh.normals,
+        mesh.num_vertices * 3 * sizeof(float),
+        3,
+        VBO_NORMAL);
+
+    out[VBO_UV] = create_vbo(
+        mesh.uvs,
+        mesh.num_vertices * 2 * sizeof(float),
+        2,
+        VBO_UV);
+
+    glGenBuffers(1, &out[VBO_INDICES]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out[VBO_INDICES]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.num_indices * 3 * sizeof(unsigned int), mesh.indices, GL_STATIC_DRAW);
+    out[NUM_VERTICES] = mesh.num_vertices;
+    out[NUM_INDICES] = mesh.num_indices * 3;
 }
 
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
@@ -168,7 +146,6 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     float mvp[16] = {0};
     for (int i = 0; i < count; i++)
     {
-        Entity e = entities[i];
         unsigned int *gpu_mesh = entities[i].gpu_mesh;
         glUseProgram(gpu_mesh[SHADER]);
         create_mvp(
@@ -181,10 +158,6 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
         draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
-}
-
-void load_vertices(char *file)
-{
 }
 
 unsigned int load_dds_to_gpu(
@@ -263,15 +236,16 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             scale[1] = atof(strtok(NULL, " "));
             scale[2] = atof(strtok(NULL, "\n"));
 
-            char *mesh = strtok(NULL, "\n");
+            char *mesh_file = strtok(NULL, "\n");
             char *vshader = strtok(NULL, "\n");
             char *fshader = strtok(NULL, "\n");
 
-            load_vertices(mesh);
+            Mesh mesh = read_mesh(mesh_file);
 
-            unsigned int *shaded_mesh = malloc(MAX_ATTRIBUTES * sizeof(int));
+            unsigned int *shaded_mesh = (unsigned int *)malloc(MAX_ATTRIBUTES * sizeof(unsigned int));
             load_shaded_mesh(
                 shaded_mesh,
+                mesh,
                 read_file(vshader),
                 read_file(fshader));
             entities[c] = (Entity){

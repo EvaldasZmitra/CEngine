@@ -1,3 +1,4 @@
+#include "util.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -275,4 +276,33 @@ char *read_file(char *file_name)
     fread(buffer, sizeof(char), numbytes, infile);
     fclose(infile);
     return buffer;
+}
+
+Mesh read_mesh(const char *file)
+{
+    FILE *infile = fopen(file, "rb");
+    char *buffer;
+    long numbytes;
+    fseek(infile, 0L, SEEK_END);
+    numbytes = ftell(infile);
+    fseek(infile, 0L, SEEK_SET);
+    buffer = (char *)calloc(numbytes, sizeof(char));
+    fread(buffer, sizeof(char), numbytes, infile);
+    fclose(infile);
+
+    Mesh mesh;
+    unsigned int offset = 0;
+    mesh.num_vertices = *(unsigned int *)&(buffer[offset]);
+    offset += 4;
+    mesh.num_indices = *(unsigned int *)&(buffer[offset]);
+    offset += 4;
+    mesh.vertices = (float *)&(buffer[offset]);
+    offset += mesh.num_vertices * 3 * 4;
+    mesh.normals = (float *)&(buffer[offset]);
+    offset += mesh.num_vertices * 3 * 4;
+    mesh.uvs = (float *)&(buffer[offset]);
+    offset += mesh.num_vertices * 2 * 4;
+    mesh.indices = (unsigned int *)&(buffer[offset]);
+
+    return mesh;
 }

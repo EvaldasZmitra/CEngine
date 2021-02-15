@@ -1,6 +1,17 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+typedef struct Mesh
+{
+    unsigned int offset;
+    unsigned int num_vertices;
+    unsigned int num_indices;
+    float *vertices;
+    float *normals;
+    float *uvs;
+    unsigned int *indices;
+} Mesh;
+
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
 void quaterion_to_4x4_matrix(float *q, float *out);
@@ -37,4 +48,5 @@ void load_dds(
     unsigned char *buffer,
     unsigned int *buffer_size);
 char *read_file(char *file_name);
+Mesh read_mesh(const char *file);
 #endif

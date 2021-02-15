@@ -4,7 +4,7 @@ cube
 -0.5 0 0
 0 0 0
 1 1 1
-a.obj
+cube.mesh
 shader-vert.glsl
 shader-frag.glsl
 
@@ -13,6 +13,6 @@ cube2
 3 0 0
 0 0.7875 0
 1 1 1
-a.obj
+cube.mesh
 shader-vert.glsl
 shader-frag.glsl
