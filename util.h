@@ -4,21 +4,7 @@
 #include "./include/GL/glew.h"
 #include "./include/GLFW/glfw3.h"
 #include "util.h"
-
-typedef enum VBO_TYPE
-{
-    VBO_VERTEX,
-    VBO_NORMAL,
-    VBO_UV,
-    VBO_INDICES,
-    MAX_VBOS,
-
-    VAO,
-    NUM_VERTICES,
-    NUM_INDICES,
-    SHADER,
-    MAX_ATTRIBUTES
-} VBO_TYPE;
+#include <stdio.h>
 
 typedef struct Camera
 {
@@ -37,8 +23,14 @@ typedef struct Entity
     float *position;
     float *rotation;
     float *scale;
-    unsigned int *gpu_mesh;
     unsigned int shader;
+    unsigned int vao;
+    unsigned int vbo_vertices;
+    unsigned int vbo_normal;
+    unsigned int vbo_uv;
+    unsigned int vbo_indices;
+    unsigned int num_vertices;
+    unsigned int num_indices;
 } Entity;
 
 typedef struct Mesh
@@ -52,26 +44,30 @@ typedef struct Mesh
     unsigned int *indices;
 } Mesh;
 
+char *read_file_stream(FILE *infile);
+char *read_file(const char *file_name);
+char *read_file_binary(const char *file_name);
+unsigned int load_dds(const char *path);
 GLFWwindow *create_window(int width, int height);
-void error_callback(int error, const char *description);
 unsigned int create_shader(const char *code, unsigned int type);
 unsigned int create_shader_program(unsigned int fragment_shader, unsigned int vertex_shader);
 unsigned int create_shader_program_from_code(const char *vertex_code, const char *fragment_code);
-unsigned int create_vbo(const void *data, int size, int stride, int type);
-void delete_gpu_mesh(unsigned int *mesh);
-void create_camera();
-void draw_gpu_mesh(unsigned int *obj);
 void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name);
+unsigned int create_vbo(const void *data, int size, int stride, int type);
+void delete_gpu_entity(Entity entity);
+void draw_gpu_entity(Entity entity);
 Camera create_default_camera();
+Entity create_gpu_entity(Mesh mesh);
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window);
-void load_mesh_to_gpu(unsigned int *out, Mesh mesh);
 Entity *load_entities_from_text(char *text, int *num_entities);
-unsigned int load_dds_to_gpu();
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
 void quaterion_to_4x4_matrix(float *q, float *out);
 void multiply_4x4_matrices(float *m1, float *m2, float *out);
 void print_4x4_matrix(float *m);
+/*
+ * Pitch, yaw, roll
+*/
 void euler_to_quaternion(float *e, float *out);
 void quaternion_to_euler(float *q, float *out);
 float inverse_square_root(float number);
@@ -88,6 +84,5 @@ void create_mvp(
     float *scale,
     float *view_projection,
     float *out);
-char *read_file(const char *file_name);
 Mesh read_mesh(const char *file);
 #endif

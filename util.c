@@ -1,7 +1,6 @@
 #include "util.h"
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 char *read_file_stream(FILE *infile)
@@ -181,21 +180,21 @@ unsigned int create_vbo(const void *data, int size, int stride, int type)
     return vertexbuffer;
 }
 
-void delete_gpu_mesh(unsigned int *mesh)
+void delete_gpu_entity(Entity entity)
 {
-    for (int i = 0; i < MAX_VBOS; i++)
-    {
-        glDeleteBuffers(1, &mesh[i]);
-    }
-    glDeleteVertexArrays(1, &mesh[VAO]);
+    glDeleteBuffers(1, &entity.vbo_indices);
+    glDeleteBuffers(1, &entity.vbo_normal);
+    glDeleteBuffers(1, &entity.vbo_uv);
+    glDeleteBuffers(1, &entity.vbo_vertices);
+    glDeleteVertexArrays(1, &entity.vao);
 }
 
-void draw_gpu_mesh(unsigned int *obj)
+void draw_gpu_entity(Entity entity)
 {
-    glBindVertexArray(obj[VAO]);
+    glBindVertexArray(entity.vao);
     glDrawElements(
         GL_TRIANGLES,
-        obj[NUM_INDICES],
+        entity.num_indices,
         GL_UNSIGNED_INT,
         (void *)0);
 }
@@ -211,37 +210,39 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-void load_mesh_to_gpu(unsigned int *out, Mesh mesh)
+Entity create_gpu_entity(Mesh mesh)
 {
-    glGenVertexArrays(1, &out[VAO]);
-    glBindVertexArray(out[VAO]);
-    out[VBO_VERTEX] = create_vbo(
+    Entity entity;
+    glGenVertexArrays(1, &entity.vao);
+    glBindVertexArray(entity.vao);
+    entity.vbo_vertices = create_vbo(
         mesh.vertices,
         mesh.num_vertices * 3 * sizeof(float),
         3,
-        VBO_VERTEX);
+        0);
 
-    out[VBO_NORMAL] = create_vbo(
+    entity.vbo_normal = create_vbo(
         mesh.normals,
         mesh.num_vertices * 3 * sizeof(float),
         3,
-        VBO_NORMAL);
+        1);
 
-    out[VBO_UV] = create_vbo(
+    entity.vbo_uv = create_vbo(
         mesh.uvs,
         mesh.num_vertices * 2 * sizeof(float),
         2,
-        VBO_UV);
+        2);
 
-    glGenBuffers(1, &out[VBO_INDICES]);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out[VBO_INDICES]);
+    glGenBuffers(1, &entity.vbo_indices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity.vbo_indices);
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
         mesh.num_indices * 3 * sizeof(unsigned int),
         mesh.indices,
         GL_STATIC_DRAW);
-    out[NUM_VERTICES] = mesh.num_vertices;
-    out[NUM_INDICES] = mesh.num_indices * 3;
+    entity.num_vertices = mesh.num_vertices;
+    entity.num_indices = mesh.num_indices * 3;
+    return entity;
 }
 
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
@@ -252,7 +253,6 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     float mvp[16] = {0};
     for (int i = 0; i < count; i++)
     {
-        unsigned int *gpu_mesh = entities[i].gpu_mesh;
         glUseProgram(entities[i].shader);
         create_mvp(
             entities[i].position,
@@ -265,7 +265,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, entities[i].texture);
         glUniform1i(TextureID, 0);
-        draw_gpu_mesh(gpu_mesh);
+        draw_gpu_entity(entities[i]);
     }
     glfwSwapBuffers(window);
 }
@@ -307,20 +307,16 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             Mesh mesh = read_mesh(mesh_file);
             unsigned int texture = load_dds(texture_file);
 
-            unsigned int *shaded_mesh = (unsigned int *)malloc(MAX_ATTRIBUTES * sizeof(unsigned int));
-            load_mesh_to_gpu(shaded_mesh, mesh);
+            entities[c] = create_gpu_entity(mesh);
             unsigned int shader_program = create_shader_program_from_code(
                 read_file(vshader),
                 read_file(fshader));
-
-            entities[c] = (Entity){
-                .texture = texture,
-                .name = name,
-                .gpu_mesh = shaded_mesh,
-                .position = pos,
-                .rotation = rot,
-                .scale = scale,
-                .shader = shader_program};
+            entities[c].shader = shader_program;
+            entities[c].texture = texture;
+            entities[c].name = name;
+            entities[c].position = pos;
+            entities[c].rotation = rot;
+            entities[c].scale = scale;
             c++;
         }
         token = strtok(NULL, "\n");
