@@ -62,6 +62,7 @@ unsigned int load_dds(const char *path)
     }
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_map_count - 1); // opengl likes array length of mipmaps
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -86,7 +87,6 @@ unsigned int load_dds(const char *path)
         w /= 2;
         h /= 2;
     }
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_map_count - 1);
     glBindTexture(GL_TEXTURE_2D, 0);
     free(data);
     return tid;
@@ -180,7 +180,7 @@ unsigned int create_vbo(const void *data, int size, int stride, int type)
     return vertexbuffer;
 }
 
-void delete_gpu_entity(Entity entity)
+void free_entity_gpu(Entity entity)
 {
     glDeleteBuffers(1, &entity.vbo_indices);
     glDeleteBuffers(1, &entity.vbo_normal);
@@ -210,26 +210,25 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-Entity create_gpu_entity(Mesh mesh)
+Entity load_entity_to_gpu(Entity entity)
 {
-    Entity entity;
     glGenVertexArrays(1, &entity.vao);
     glBindVertexArray(entity.vao);
     entity.vbo_vertices = create_vbo(
-        mesh.vertices,
-        mesh.num_vertices * 3 * sizeof(float),
+        entity.vertices,
+        entity.num_vertices * 3 * sizeof(float),
         3,
         0);
 
     entity.vbo_normal = create_vbo(
-        mesh.normals,
-        mesh.num_vertices * 3 * sizeof(float),
+        entity.normals,
+        entity.num_vertices * 3 * sizeof(float),
         3,
         1);
 
     entity.vbo_uv = create_vbo(
-        mesh.uvs,
-        mesh.num_vertices * 2 * sizeof(float),
+        entity.uvs,
+        entity.num_vertices * 2 * sizeof(float),
         2,
         2);
 
@@ -237,11 +236,11 @@ Entity create_gpu_entity(Mesh mesh)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity.vbo_indices);
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
-        mesh.num_indices * 3 * sizeof(unsigned int),
-        mesh.indices,
+        entity.num_indices * 3 * sizeof(unsigned int),
+        entity.indices,
         GL_STATIC_DRAW);
-    entity.num_vertices = mesh.num_vertices;
-    entity.num_indices = mesh.num_indices * 3;
+    entity.num_vertices = entity.num_vertices;
+    entity.num_indices = entity.num_indices * 3;
     return entity;
 }
 
@@ -251,6 +250,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0, 0.2, 0.2, 1);
     float mvp[16] = {0};
+    float m[16] = {0};
     for (int i = 0; i < count; i++)
     {
         glUseProgram(entities[i].shader);
@@ -260,7 +260,11 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
             entities[i].scale,
             view_projection_m,
             mvp);
+        create_transform(entities[i].position,
+                         entities[i].rotation,
+                         entities[i].scale, m);
         uniform_matrix_4x4(entities[i].shader, mvp, "VP");
+        uniform_matrix_4x4(entities[i].shader, m, "M");
         GLuint TextureID = glGetUniformLocation(entities[i].shader, "myTextureSampler");
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, entities[i].texture);
@@ -270,7 +274,7 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     glfwSwapBuffers(window);
 }
 
-Entity *load_entities_from_text(char *text, int *num_entities)
+Entity *load_entities(char *text, int *num_entities)
 {
     char *token = strtok(text, "\n");
     int n = atoi(token);
@@ -282,6 +286,7 @@ Entity *load_entities_from_text(char *text, int *num_entities)
     {
         if (strcmp(token, "_entity_") == 0)
         {
+            Entity entity;
             char *name = strtok(NULL, "\n");
 
             float *pos = malloc(3 * sizeof(float));
@@ -304,19 +309,34 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             char *vshader = strtok(NULL, "\n");
             char *fshader = strtok(NULL, "\n");
 
-            Mesh mesh = read_mesh(mesh_file);
-            unsigned int texture = load_dds(texture_file);
+            char *buffer = read_file_binary(mesh_file);
+            unsigned int offset = 0;
+            entity.num_vertices = *(unsigned int *)&(buffer[offset]);
+            offset += 4;
+            entity.num_indices = *(unsigned int *)&(buffer[offset]);
+            offset += 4;
+            entity.vertices = (float *)&(buffer[offset]);
+            offset += entity.num_vertices * 3 * 4;
+            entity.normals = (float *)&(buffer[offset]);
+            offset += entity.num_vertices * 3 * 4;
+            entity.uvs = (float *)&(buffer[offset]);
+            offset += entity.num_vertices * 2 * 4;
+            entity.indices = (unsigned int *)&(buffer[offset]);
 
-            entities[c] = create_gpu_entity(mesh);
-            unsigned int shader_program = create_shader_program_from_code(
-                read_file(vshader),
-                read_file(fshader));
-            entities[c].shader = shader_program;
-            entities[c].texture = texture;
+            char *v_shader_code = read_file(vshader);
+            char *f_shader_code = read_file(fshader);
+            entities[c] = load_entity_to_gpu(entity);
+            entities[c].shader = create_shader_program_from_code(
+                v_shader_code,
+                f_shader_code);
+            free(v_shader_code);
+            free(f_shader_code);
+            entities[c].texture = load_dds(texture_file);
             entities[c].name = name;
             entities[c].position = pos;
             entities[c].rotation = rot;
             entities[c].scale = scale;
+            free(buffer);
             c++;
         }
         token = strtok(NULL, "\n");
@@ -341,7 +361,7 @@ void set_4x4_matrix_scale(float *matrix, float x, float y, float z)
     matrix[0] = x;
     matrix[5] = y;
     matrix[10] = z;
-    matrix[15] = z;
+    matrix[15] = 1;
 }
 
 void quaterion_to_4x4_matrix(float *q, float *out)
@@ -426,7 +446,7 @@ void quaternion_to_euler(float *q, float *out)
 
     float sinp = 2 * (q[3] * q[1] - q[2] * q[0]);
     if (abs(sinp) >= 1)
-        out[1] = copysignf(M_PI / 2, sinp); // use 90 degrees if out of range
+        out[1] = copysignf(M_PI_2, sinp); // use 90 degrees if out of range
     else
         out[1] = (float)asin(sinp);
 
@@ -522,7 +542,7 @@ void create_transform(float *position, float *rotation, float *scale, float *out
     float rotate_matrix[16] = {0};
     float translate_matrix[16] = {0};
     float quaternion[4] = {0};
-    set_4x4_matrix_scale(scale_matrix, 1.0f, 1.0f, 1.0f);
+    set_4x4_matrix_scale(scale_matrix, scale[0], scale[1], scale[2]);
     euler_to_quaternion(
         (float[]){
             rotation[0],
@@ -551,24 +571,4 @@ void create_mvp(
     float transform[16] = {0};
     create_transform(position, rotation, scale, transform);
     multiply_4x4_matrices(view_projection, transform, out);
-}
-
-Mesh read_mesh(const char *file)
-{
-    char *buffer = read_file_binary(file);
-    Mesh mesh;
-    unsigned int offset = 0;
-    mesh.num_vertices = *(unsigned int *)&(buffer[offset]);
-    offset += 4;
-    mesh.num_indices = *(unsigned int *)&(buffer[offset]);
-    offset += 4;
-    mesh.vertices = (float *)&(buffer[offset]);
-    offset += mesh.num_vertices * 3 * 4;
-    mesh.normals = (float *)&(buffer[offset]);
-    offset += mesh.num_vertices * 3 * 4;
-    mesh.uvs = (float *)&(buffer[offset]);
-    offset += mesh.num_vertices * 2 * 4;
-    mesh.indices = (unsigned int *)&(buffer[offset]);
-
-    return mesh;
 }

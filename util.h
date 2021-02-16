@@ -31,18 +31,13 @@ typedef struct Entity
     unsigned int vbo_indices;
     unsigned int num_vertices;
     unsigned int num_indices;
-} Entity;
 
-typedef struct Mesh
-{
     unsigned int offset;
-    unsigned int num_vertices;
-    unsigned int num_indices;
     float *vertices;
     float *normals;
     float *uvs;
     unsigned int *indices;
-} Mesh;
+} Entity;
 
 char *read_file_stream(FILE *infile);
 char *read_file(const char *file_name);
@@ -54,12 +49,12 @@ unsigned int create_shader_program(unsigned int fragment_shader, unsigned int ve
 unsigned int create_shader_program_from_code(const char *vertex_code, const char *fragment_code);
 void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name);
 unsigned int create_vbo(const void *data, int size, int stride, int type);
-void delete_gpu_entity(Entity entity);
+void free_entity_gpu(Entity entity);
 void draw_gpu_entity(Entity entity);
 Camera create_default_camera();
-Entity create_gpu_entity(Mesh mesh);
+Entity load_entity_to_gpu(Entity entity);
 void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window);
-Entity *load_entities_from_text(char *text, int *num_entities);
+Entity *load_entities(char *text, int *num_entities);
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
 void quaterion_to_4x4_matrix(float *q, float *out);
@@ -84,5 +79,4 @@ void create_mvp(
     float *scale,
     float *view_projection,
     float *out);
-Mesh read_mesh(const char *file);
 #endif
