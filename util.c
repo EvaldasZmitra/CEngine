@@ -253,19 +253,18 @@ void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwi
     for (int i = 0; i < count; i++)
     {
         unsigned int *gpu_mesh = entities[i].gpu_mesh;
-        glUseProgram(gpu_mesh[SHADER]);
+        glUseProgram(entities[i].shader);
         create_mvp(
             entities[i].position,
             entities[i].rotation,
             entities[i].scale,
             view_projection_m,
             mvp);
-        uniform_matrix_4x4(gpu_mesh[SHADER], mvp, "VP");
-        GLuint TextureID = glGetUniformLocation(gpu_mesh[SHADER], "myTextureSampler");
+        uniform_matrix_4x4(entities[i].shader, mvp, "VP");
+        GLuint TextureID = glGetUniformLocation(entities[i].shader, "myTextureSampler");
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, entities[i].texture);
         glUniform1i(TextureID, 0);
-
         draw_gpu_mesh(gpu_mesh);
     }
     glfwSwapBuffers(window);
@@ -313,7 +312,6 @@ Entity *load_entities_from_text(char *text, int *num_entities)
             unsigned int shader_program = create_shader_program_from_code(
                 read_file(vshader),
                 read_file(fshader));
-            shaded_mesh[SHADER] = shader_program;
 
             entities[c] = (Entity){
                 .texture = texture,
