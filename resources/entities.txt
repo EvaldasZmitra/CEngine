@@ -6,5 +6,5 @@ cube
 100 1 100
 ./resources/cube.mesh
 ./resources/brick.dds
-shader-vert.glsl
-shader-frag.glsl
+./resources/shader-vert.glsl
+./resources/shader-frag.glsl
