@@ -109,7 +109,7 @@ SceneNode load_scene(const char *file)
 int main(int argc, char *argv[])
 {
     GLFWwindow *window = create_window(window_width, window_height);
-    SceneNode scene = load_scene("entities.txt");
+    SceneNode scene = load_scene("./resources/entities.txt");
 
     game_loop(window, scene);
 

@@ -4,7 +4,7 @@ cube
 0 0 0
 0 0 0
 100 1 100
-cube.mesh
-brick.dds
+./resources/cube.mesh
+./resources/brick.dds
 shader-vert.glsl
 shader-frag.glsl
