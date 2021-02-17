@@ -1,8 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 #define GLEW_STATIC
-#include "./include/GL/glew.h"
-#include "./include/GLFW/glfw3.h"
+#include "../include/GL/glew.h"
+#include "../include/GLFW/glfw3.h"
 #include "util.h"
 #include <stdio.h>
 
