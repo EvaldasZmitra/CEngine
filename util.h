@@ -50,10 +50,9 @@ unsigned int create_shader_program_from_code(const char *vertex_code, const char
 void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name);
 unsigned int create_vbo(const void *data, int size, int stride, int type);
 void free_entity_gpu(Entity entity);
-void draw_gpu_entity(Entity entity);
+void draw_entity(Entity *entity, Camera camera);
 Camera create_default_camera();
 Entity load_entity_to_gpu(Entity entity);
-void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window);
 Entity *load_entities(char *text, int *num_entities);
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z);

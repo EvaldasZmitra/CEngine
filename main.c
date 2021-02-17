@@ -6,55 +6,112 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-float *world_up = (float[]){0, 1, 0};
 int window_width = 512;
 int window_height = 512;
 
-int main(int argc, char *argv[])
+typedef enum StructTypes
 {
+    ENTITY
+} StructTypes;
 
-    GLFWwindow *window = create_window(window_width, window_height);
+typedef struct SceneNode
+{
+    StructTypes type;
+    unsigned int num_children;
+    void **children;
+    void *data;
+} SceneNode;
 
-    char *text = read_file("entities.txt");
-    int num_entities = 0;
-    Entity *entities = load_entities(text, &num_entities);
+// void load(void *data)
+// {
+//     StructTypes type;
+//     switch (type)
+//     {
+//     case ENTITY:;
+//         Entity *entity1 = (Entity *)(data);
+//         break;
 
+//     default:
+//         break;
+//     }
+// }
+
+void draw(GLFWwindow *window, Camera camera, SceneNode scene)
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0, 0.2, 0.2, 1);
+
+    switch (scene.type)
+    {
+    default:
+        draw_entity((Entity *)(scene.data), camera);
+        break;
+    }
+    glfwSwapBuffers(window);
+}
+
+void handle_movement(GLFWwindow *window, Camera *camera)
+{
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    {
+        camera->position[2] -= 0.1f;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    {
+        camera->position[2] += 0.1f;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    {
+        camera->position[0] += 0.1f;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    {
+        camera->position[0] -= 0.1f;
+    }
+}
+
+void game_logic(GLFWwindow *window, Camera *camera)
+{
+    handle_movement(window, camera);
+}
+
+void game_loop(GLFWwindow *window, SceneNode scene)
+{
     Camera camera = create_default_camera();
     camera.position = (float[]){0, 2, 0};
     camera.forward = (float[]){0, 0, -1};
     camera.aspect = (float)window_width / (float)window_height;
 
-    float projection_m[16] = {0};
-    float view_m[16] = {0};
-    float view_projection_m[16] = {0};
-    create_projection(camera.fov, camera.aspect, camera.nearClipPlane, camera.farClipPlane, projection_m);
     while (!glfwWindowShouldClose(window))
     {
-        // Move forward
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        {
-            camera.position[2] -= 0.1f;
-        }
-        // Move backward
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        {
-            camera.position[2] += 0.1f;
-        }
-        // Strafe right
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        {
-            camera.position[0] += 0.1f;
-        }
-        // Strafe left
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        {
-            camera.position[0] -= 0.1f;
-        }
-
-        create_view(camera.position, camera.forward, world_up, view_m);
-        multiply_4x4_matrices(projection_m, view_m, view_projection_m);
-        draw_entities(entities, num_entities, view_projection_m, window);
+        glfwPollEvents();
+        game_logic(window, &camera);
+        draw(window, camera, scene);
     }
+}
+
+SceneNode load_scene(const char *file)
+{
+    char *text = read_file(file);
+    int num_entities = 0;
+    Entity *entities = load_entities(text, &num_entities);
+
+    return (SceneNode){
+        .type = ENTITY,
+        .num_children = 0,
+        .children = NULL,
+        .data = (void *)&entities[0]};
+}
+
+int main(int argc, char *argv[])
+{
+    GLFWwindow *window = create_window(window_width, window_height);
+    SceneNode scene = load_scene("entities.txt");
+
+    game_loop(window, scene);
 
     glfwTerminate();
     return 0;

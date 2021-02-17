@@ -87,6 +87,7 @@ unsigned int load_dds(const char *path)
         w /= 2;
         h /= 2;
     }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mip_map_count - 1);
     glBindTexture(GL_TEXTURE_2D, 0);
     free(data);
     return tid;
@@ -108,6 +109,8 @@ GLFWwindow *create_window(int width, int height)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glfwSwapInterval(1); //vsync
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    glEnable(GL_MULTISAMPLE);
     return window;
 }
 
@@ -169,6 +172,10 @@ void uniform_matrix_4x4(unsigned int shader, const float *matrix, char *name)
     glUniformMatrix4fv(MatrixID, 1, GL_TRUE, matrix);
 }
 
+void update_camera_uniforms(Camera camera)
+{
+}
+
 unsigned int create_vbo(const void *data, int size, int stride, int type)
 {
     unsigned int vertexbuffer;
@@ -187,16 +194,6 @@ void free_entity_gpu(Entity entity)
     glDeleteBuffers(1, &entity.vbo_uv);
     glDeleteBuffers(1, &entity.vbo_vertices);
     glDeleteVertexArrays(1, &entity.vao);
-}
-
-void draw_gpu_entity(Entity entity)
-{
-    glBindVertexArray(entity.vao);
-    glDrawElements(
-        GL_TRIANGLES,
-        entity.num_indices,
-        GL_UNSIGNED_INT,
-        (void *)0);
 }
 
 Camera create_default_camera()
@@ -244,34 +241,39 @@ Entity load_entity_to_gpu(Entity entity)
     return entity;
 }
 
-void draw_entities(Entity *entities, int count, float *view_projection_m, GLFWwindow *window)
+void draw_entity(Entity *entity, Camera camera)
 {
-    glfwPollEvents();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0, 0.2, 0.2, 1);
+    float projection_m[16] = {0};
+    float view_m[16] = {0};
+    float view_projection_m[16] = {0};
+    create_projection(camera.fov, camera.aspect, camera.nearClipPlane, camera.farClipPlane, projection_m);
+    create_view(camera.position, camera.forward, (float[]){0, 1, 0}, view_m);
+    multiply_4x4_matrices(projection_m, view_m, view_projection_m);
+
     float mvp[16] = {0};
     float m[16] = {0};
-    for (int i = 0; i < count; i++)
-    {
-        glUseProgram(entities[i].shader);
-        create_mvp(
-            entities[i].position,
-            entities[i].rotation,
-            entities[i].scale,
-            view_projection_m,
-            mvp);
-        create_transform(entities[i].position,
-                         entities[i].rotation,
-                         entities[i].scale, m);
-        uniform_matrix_4x4(entities[i].shader, mvp, "VP");
-        uniform_matrix_4x4(entities[i].shader, m, "M");
-        GLuint TextureID = glGetUniformLocation(entities[i].shader, "myTextureSampler");
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, entities[i].texture);
-        glUniform1i(TextureID, 0);
-        draw_gpu_entity(entities[i]);
-    }
-    glfwSwapBuffers(window);
+    glUseProgram(entity->shader);
+    create_mvp(
+        entity->position,
+        entity->rotation,
+        entity->scale,
+        view_projection_m,
+        mvp);
+    create_transform(entity->position,
+                     entity->rotation,
+                     entity->scale, m);
+    uniform_matrix_4x4(entity->shader, mvp, "VP");
+    uniform_matrix_4x4(entity->shader, m, "M");
+    GLuint TextureID = glGetUniformLocation(entity->shader, "myTextureSampler");
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, entity->texture);
+    glUniform1i(TextureID, 0);
+    glBindVertexArray(entity->vao);
+    glDrawElements(
+        GL_TRIANGLES,
+        entity->num_indices,
+        GL_UNSIGNED_INT,
+        (void *)0);
 }
 
 Entity *load_entities(char *text, int *num_entities)
