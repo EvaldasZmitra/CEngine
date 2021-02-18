@@ -187,13 +187,13 @@ unsigned int create_vbo(const void *data, int size, int stride, int type)
     return vertexbuffer;
 }
 
-void free_entity_gpu(Entity entity)
+void free_mesh_gpu(Mesh *mesh)
 {
-    glDeleteBuffers(1, &entity.mesh->vbo_indices);
-    glDeleteBuffers(1, &entity.mesh->vbo_normal);
-    glDeleteBuffers(1, &entity.mesh->vbo_uv);
-    glDeleteBuffers(1, &entity.mesh->vbo_vertices);
-    glDeleteVertexArrays(1, &entity.mesh->vao);
+    glDeleteBuffers(1, &mesh->vbo_indices);
+    glDeleteBuffers(1, &mesh->vbo_normal);
+    glDeleteBuffers(1, &mesh->vbo_uv);
+    glDeleteBuffers(1, &mesh->vbo_vertices);
+    glDeleteVertexArrays(1, &mesh->vao);
 }
 
 Camera create_default_camera()
@@ -207,37 +207,37 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-void load_entity_to_gpu(Entity *entity)
+void load_mesh_to_gpu(Mesh *mesh)
 {
-    glGenVertexArrays(1, &entity->mesh->vao);
-    glBindVertexArray(entity->mesh->vao);
-    entity->mesh->vbo_vertices = create_vbo(
-        entity->mesh->vertices,
-        entity->mesh->num_vertices * 3 * sizeof(float),
+    glGenVertexArrays(1, &mesh->vao);
+    glBindVertexArray(mesh->vao);
+    mesh->vbo_vertices = create_vbo(
+        mesh->vertices,
+        mesh->num_vertices * 3 * sizeof(float),
         3,
         0);
 
-    entity->mesh->vbo_normal = create_vbo(
-        entity->mesh->normals,
-        entity->mesh->num_vertices * 3 * sizeof(float),
+    mesh->vbo_normal = create_vbo(
+        mesh->normals,
+        mesh->num_vertices * 3 * sizeof(float),
         3,
         1);
 
-    entity->mesh->vbo_uv = create_vbo(
-        entity->mesh->uvs,
-        entity->mesh->num_vertices * 2 * sizeof(float),
+    mesh->vbo_uv = create_vbo(
+        mesh->uvs,
+        mesh->num_vertices * 2 * sizeof(float),
         2,
         2);
 
-    glGenBuffers(1, &entity->mesh->vbo_indices);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity->mesh->vbo_indices);
+    glGenBuffers(1, &mesh->vbo_indices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->vbo_indices);
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
-        entity->mesh->num_indices * 3 * sizeof(unsigned int),
-        entity->mesh->indices,
+        mesh->num_indices * 3 * sizeof(unsigned int),
+        mesh->indices,
         GL_STATIC_DRAW);
-    entity->mesh->num_vertices = entity->mesh->num_vertices;
-    entity->mesh->num_indices = entity->mesh->num_indices * 3;
+    mesh->num_vertices = mesh->num_vertices;
+    mesh->num_indices = mesh->num_indices * 3;
 }
 
 void draw_entity(Entity *entity, Camera camera)
@@ -329,7 +329,7 @@ Entity *load_entities(char *text, int *num_entities)
 
             char *v_shader_code = read_file(vshader);
             char *f_shader_code = read_file(fshader);
-            load_entity_to_gpu(&entity);
+            load_mesh_to_gpu(entity.mesh);
             entities[c] = entity;
             entities[c].shader = create_shader_program_from_code(
                 v_shader_code,
