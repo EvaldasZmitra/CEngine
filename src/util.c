@@ -189,11 +189,11 @@ unsigned int create_vbo(const void *data, int size, int stride, int type)
 
 void free_entity_gpu(Entity entity)
 {
-    glDeleteBuffers(1, &entity.vbo_indices);
-    glDeleteBuffers(1, &entity.vbo_normal);
-    glDeleteBuffers(1, &entity.vbo_uv);
-    glDeleteBuffers(1, &entity.vbo_vertices);
-    glDeleteVertexArrays(1, &entity.vao);
+    glDeleteBuffers(1, &entity.mesh->vbo_indices);
+    glDeleteBuffers(1, &entity.mesh->vbo_normal);
+    glDeleteBuffers(1, &entity.mesh->vbo_uv);
+    glDeleteBuffers(1, &entity.mesh->vbo_vertices);
+    glDeleteVertexArrays(1, &entity.mesh->vao);
 }
 
 Camera create_default_camera()
@@ -209,35 +209,35 @@ Camera create_default_camera()
 
 void load_entity_to_gpu(Entity *entity)
 {
-    glGenVertexArrays(1, &entity->vao);
-    glBindVertexArray(entity->vao);
-    entity->vbo_vertices = create_vbo(
-        entity->vertices,
-        entity->num_vertices * 3 * sizeof(float),
+    glGenVertexArrays(1, &entity->mesh->vao);
+    glBindVertexArray(entity->mesh->vao);
+    entity->mesh->vbo_vertices = create_vbo(
+        entity->mesh->vertices,
+        entity->mesh->num_vertices * 3 * sizeof(float),
         3,
         0);
 
-    entity->vbo_normal = create_vbo(
-        entity->normals,
-        entity->num_vertices * 3 * sizeof(float),
+    entity->mesh->vbo_normal = create_vbo(
+        entity->mesh->normals,
+        entity->mesh->num_vertices * 3 * sizeof(float),
         3,
         1);
 
-    entity->vbo_uv = create_vbo(
-        entity->uvs,
-        entity->num_vertices * 2 * sizeof(float),
+    entity->mesh->vbo_uv = create_vbo(
+        entity->mesh->uvs,
+        entity->mesh->num_vertices * 2 * sizeof(float),
         2,
         2);
 
-    glGenBuffers(1, &entity->vbo_indices);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity->vbo_indices);
+    glGenBuffers(1, &entity->mesh->vbo_indices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity->mesh->vbo_indices);
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
-        entity->num_indices * 3 * sizeof(unsigned int),
-        entity->indices,
+        entity->mesh->num_indices * 3 * sizeof(unsigned int),
+        entity->mesh->indices,
         GL_STATIC_DRAW);
-    entity->num_vertices = entity->num_vertices;
-    entity->num_indices = entity->num_indices * 3;
+    entity->mesh->num_vertices = entity->mesh->num_vertices;
+    entity->mesh->num_indices = entity->mesh->num_indices * 3;
 }
 
 void draw_entity(Entity *entity, Camera camera)
@@ -267,10 +267,10 @@ void draw_entity(Entity *entity, Camera camera)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, entity->texture);
     glUniform1i(TextureID, 0);
-    glBindVertexArray(entity->vao);
+    glBindVertexArray(entity->mesh->vao);
     glDrawElements(
         GL_TRIANGLES,
-        entity->num_indices,
+        entity->mesh->num_indices,
         GL_UNSIGNED_INT,
         (void *)0);
 }
@@ -311,18 +311,21 @@ Entity *load_entities(char *text, int *num_entities)
             char *fshader = strtok(NULL, "\n");
 
             char *buffer = read_file_binary(mesh_file);
+
+            Mesh *mesh = malloc(sizeof(Mesh));
             unsigned int offset = 0;
-            entity.num_vertices = *(unsigned int *)&(buffer[offset]);
+            mesh->num_vertices = *(unsigned int *)&(buffer[offset]);
             offset += 4;
-            entity.num_indices = *(unsigned int *)&(buffer[offset]);
+            mesh->num_indices = *(unsigned int *)&(buffer[offset]);
             offset += 4;
-            entity.vertices = (float *)&(buffer[offset]);
-            offset += entity.num_vertices * 3 * 4;
-            entity.normals = (float *)&(buffer[offset]);
-            offset += entity.num_vertices * 3 * 4;
-            entity.uvs = (float *)&(buffer[offset]);
-            offset += entity.num_vertices * 2 * 4;
-            entity.indices = (unsigned int *)&(buffer[offset]);
+            mesh->vertices = (float *)&(buffer[offset]);
+            offset += mesh->num_vertices * 3 * 4;
+            mesh->normals = (float *)&(buffer[offset]);
+            offset += mesh->num_vertices * 3 * 4;
+            mesh->uvs = (float *)&(buffer[offset]);
+            offset += mesh->num_vertices * 2 * 4;
+            mesh->indices = (unsigned int *)&(buffer[offset]);
+            entity.mesh = mesh;
 
             char *v_shader_code = read_file(vshader);
             char *f_shader_code = read_file(fshader);

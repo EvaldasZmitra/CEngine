@@ -16,14 +16,8 @@ typedef struct Camera
     float farClipPlane;
 } Camera;
 
-typedef struct Entity
+typedef struct Mesh
 {
-    unsigned int texture;
-    char *name;
-    float *position;
-    float *rotation;
-    float *scale;
-    unsigned int shader;
     unsigned int vao;
     unsigned int vbo_vertices;
     unsigned int vbo_normal;
@@ -37,6 +31,17 @@ typedef struct Entity
     float *normals;
     float *uvs;
     unsigned int *indices;
+} Mesh;
+
+typedef struct Entity
+{
+    unsigned int texture;
+    char *name;
+    float *position;
+    float *rotation;
+    float *scale;
+    unsigned int shader;
+    Mesh *mesh;
 } Entity;
 
 char *read_file_stream(FILE *infile);
