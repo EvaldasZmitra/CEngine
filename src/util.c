@@ -207,38 +207,37 @@ Camera create_default_camera()
         .fov = M_PI_2};
 }
 
-Entity load_entity_to_gpu(Entity entity)
+void load_entity_to_gpu(Entity *entity)
 {
-    glGenVertexArrays(1, &entity.vao);
-    glBindVertexArray(entity.vao);
-    entity.vbo_vertices = create_vbo(
-        entity.vertices,
-        entity.num_vertices * 3 * sizeof(float),
+    glGenVertexArrays(1, &entity->vao);
+    glBindVertexArray(entity->vao);
+    entity->vbo_vertices = create_vbo(
+        entity->vertices,
+        entity->num_vertices * 3 * sizeof(float),
         3,
         0);
 
-    entity.vbo_normal = create_vbo(
-        entity.normals,
-        entity.num_vertices * 3 * sizeof(float),
+    entity->vbo_normal = create_vbo(
+        entity->normals,
+        entity->num_vertices * 3 * sizeof(float),
         3,
         1);
 
-    entity.vbo_uv = create_vbo(
-        entity.uvs,
-        entity.num_vertices * 2 * sizeof(float),
+    entity->vbo_uv = create_vbo(
+        entity->uvs,
+        entity->num_vertices * 2 * sizeof(float),
         2,
         2);
 
-    glGenBuffers(1, &entity.vbo_indices);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity.vbo_indices);
+    glGenBuffers(1, &entity->vbo_indices);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, entity->vbo_indices);
     glBufferData(
         GL_ELEMENT_ARRAY_BUFFER,
-        entity.num_indices * 3 * sizeof(unsigned int),
-        entity.indices,
+        entity->num_indices * 3 * sizeof(unsigned int),
+        entity->indices,
         GL_STATIC_DRAW);
-    entity.num_vertices = entity.num_vertices;
-    entity.num_indices = entity.num_indices * 3;
-    return entity;
+    entity->num_vertices = entity->num_vertices;
+    entity->num_indices = entity->num_indices * 3;
 }
 
 void draw_entity(Entity *entity, Camera camera)
@@ -327,7 +326,8 @@ Entity *load_entities(char *text, int *num_entities)
 
             char *v_shader_code = read_file(vshader);
             char *f_shader_code = read_file(fshader);
-            entities[c] = load_entity_to_gpu(entity);
+            load_entity_to_gpu(&entity);
+            entities[c] = entity;
             entities[c].shader = create_shader_program_from_code(
                 v_shader_code,
                 f_shader_code);
