@@ -98,6 +98,7 @@ SceneNode load_scene(const char *file)
     char *text = read_file(file);
     int num_entities = 0;
     Entity *entities = load_entities(text, &num_entities);
+    save_entities("./resources/entities.txt", entities, num_entities);
 
     return (SceneNode){
         .type = ENTITY,

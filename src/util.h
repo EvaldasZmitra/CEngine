@@ -31,6 +31,7 @@ typedef struct Mesh
     float *normals;
     float *uvs;
     unsigned int *indices;
+    char *file_name;
 } Mesh;
 
 typedef struct Entity
@@ -42,6 +43,11 @@ typedef struct Entity
     float *scale;
     unsigned int shader;
     Mesh *mesh;
+
+    char *texture_name;
+    char *vert_name;
+    char *frag_name;
+
 } Entity;
 
 char *read_file_stream(FILE *infile);
@@ -59,6 +65,7 @@ void draw_entity(Entity *entity, Camera camera);
 Camera create_default_camera();
 void load_mesh_to_gpu(Mesh *mesh);
 Entity *load_entities(char *text, int *num_entities);
+void save_entities(const char *file_name, Entity *entities, unsigned int num_entities);
 void set_4x4_matrix_position(float *matrix, float x, float y, float z);
 void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
 void quaterion_to_4x4_matrix(float *q, float *out);

@@ -1,0 +1,10 @@
+1
+_entity_
+ASD
+0.000000 0.000000 0.000000
+0.000000 0.000000 0.000000
+100.000000 1.000000 100.000000
+./resources/cube.mesh
+./resources/brick.dds
+./resources/shader-vert.glsl
+./resources/shader-frag.glsl

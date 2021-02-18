@@ -275,6 +275,33 @@ void draw_entity(Entity *entity, Camera camera)
         (void *)0);
 }
 
+void write_vec3(FILE *fp, float *vec3)
+{
+    fprintf(fp, "%f %f %f\n",
+            vec3[0],
+            vec3[1],
+            vec3[2]);
+}
+
+void save_entities(const char *file_name, Entity *entities, unsigned int num_entities)
+{
+    FILE *fp = fopen(file_name, "w");
+    fprintf(fp, "%d\n", num_entities);
+    for (int i = 0; i < num_entities; i++)
+    {
+        fprintf(fp, "_entity_\n");
+        fprintf(fp, "ASD\n");
+        write_vec3(fp, entities[i].position);
+        write_vec3(fp, entities[i].rotation);
+        write_vec3(fp, entities[i].scale);
+        fprintf(fp, "%s\n", entities[i].mesh->file_name);
+        fprintf(fp, "%s\n", entities[i].texture_name);
+        fprintf(fp, "%s\n", entities[i].vert_name);
+        fprintf(fp, "%s\n", entities[i].frag_name);
+    }
+    fclose(fp);
+}
+
 Entity *load_entities(char *text, int *num_entities)
 {
     char *token = strtok(text, "\n");
@@ -311,8 +338,8 @@ Entity *load_entities(char *text, int *num_entities)
             char *fshader = strtok(NULL, "\n");
 
             char *buffer = read_file_binary(mesh_file);
-
             Mesh *mesh = malloc(sizeof(Mesh));
+            mesh->file_name = mesh_file;
             unsigned int offset = 0;
             mesh->num_vertices = *(unsigned int *)&(buffer[offset]);
             offset += 4;
@@ -341,6 +368,11 @@ Entity *load_entities(char *text, int *num_entities)
             entities[c].position = pos;
             entities[c].rotation = rot;
             entities[c].scale = scale;
+
+            entities[c].texture_name = texture_file;
+            entities[c].vert_name = vshader;
+            entities[c].frag_name = fshader;
+
             free(buffer);
             c++;
         }
