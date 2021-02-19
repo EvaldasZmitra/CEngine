@@ -52,24 +52,69 @@ void draw(GLFWwindow *window, Camera camera, SceneNode scene)
 
 void handle_movement(GLFWwindow *window, Camera *camera)
 {
+    static double x_pos_old, y_pos_old;
+    static double pitch, yaw;
+    double x_pos, y_pos;
+    double dx, dy;
+    glfwGetCursorPos(window, &x_pos, &y_pos);
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+    {
+        dx = x_pos - x_pos_old;
+        yaw += dx / 100.0;
+
+        dy = y_pos - y_pos_old;
+        pitch -= dy / 100.0;
+        pitch = fmax(fmin(pitch, 89), -89);
+    }
+
+    x_pos_old = x_pos;
+    y_pos_old = y_pos;
+
+    float q[4] = {0};
+    float m[16] = {0};
+    euler_to_quaternion((float[]){pitch, yaw, 0}, q);
+    quaterion_to_4x4_matrix(q, m);
+    float fwd[4] = {0, 0, -1, 0};
+    float new_fwd[4] = {0};
+    multiply_vec3_by_4x4_matrix(m, fwd, new_fwd);
+    //printf("%f %f %f %f\n", new_fwd[0], new_fwd[1], new_fwd[2], new_fwd[3]);
+    //printf("%f %f %f\n", camera->forward[0], camera->forward[1], camera->forward[2]);
+    //printf("%f %f\n", pitch, yaw);
+    normalize_vector3(new_fwd);
+    float right[3] = {0};
+    cross_vector3(new_fwd, (float[]){0, 1, 0}, right);
+    normalize_vector3(right);
+    camera->forward[0] = new_fwd[0];
+    camera->forward[1] = new_fwd[1];
+    camera->forward[2] = new_fwd[2];
+
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
     {
-        camera->position[2] -= 0.1f;
+        camera->position[0] += new_fwd[0] * 0.1f;
+        camera->position[1] += new_fwd[1] * 0.1f;
+        camera->position[2] += new_fwd[2] * 0.1f;
     }
 
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
     {
-        camera->position[2] += 0.1f;
+        camera->position[0] -= new_fwd[0] * 0.1f;
+        camera->position[1] -= new_fwd[1] * 0.1f;
+        camera->position[2] -= new_fwd[2] * 0.1f;
     }
 
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
     {
-        camera->position[0] += 0.1f;
+        camera->position[0] += right[0] * 0.1f;
+        camera->position[1] += right[1] * 0.1f;
+        camera->position[2] += right[2] * 0.1f;
     }
 
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
     {
-        camera->position[0] -= 0.1f;
+        camera->position[0] -= right[0] * 0.1f;
+        camera->position[1] -= right[1] * 0.1f;
+        camera->position[2] -= right[2] * 0.1f;
     }
 }
 

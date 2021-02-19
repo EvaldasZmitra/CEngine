@@ -441,6 +441,19 @@ void multiply_4x4_matrices(float *m1, float *m2, float *out)
     }
 }
 
+void multiply_vec3_by_4x4_matrix(float *m, float *v, float *o)
+{
+    for (int y = 0; y < 4; y++)
+    {
+        float sum = 0;
+        for (int x = 0; x < 4; x++)
+        {
+            sum += m[y * 4 + x] * v[x];
+        }
+        o[y] = sum;
+    }
+}
+
 void print_4x4_matrix(float *m)
 {
     for (int i = 0; i < 4; i++)
@@ -528,7 +541,13 @@ void subtract_vector3(float *v1, float *v2)
     v1[0] -= v2[0];
     v1[1] -= v2[1];
     v1[2] -= v2[2];
-    v1[3] -= v2[3];
+}
+
+void add_vector3(float *v1, float *v2)
+{
+    v1[0] += v2[0];
+    v1[1] += v2[1];
+    v1[2] += v2[2];
 }
 
 float dot_vector3(float *v1, float *v2)
@@ -550,7 +569,9 @@ void create_view(float *pos, float *fwd, float *up, float *out)
 {
     float right[] = {0, 0, 0};
     cross_vector3(fwd, up, right);
+    normalize_vector3(right);
     cross_vector3(right, fwd, up);
+    normalize_vector3(up);
 
     out[0] = right[0];
     out[1] = right[1];
@@ -562,9 +583,9 @@ void create_view(float *pos, float *fwd, float *up, float *out)
     out[6] = up[2];
     out[7] = -dot_vector3(up, pos);
 
-    out[8] = fwd[0];
-    out[9] = fwd[1];
-    out[10] = fwd[2];
+    out[8] = -fwd[0];
+    out[9] = -fwd[1];
+    out[10] = -fwd[2];
     out[11] = dot_vector3(fwd, pos);
 
     out[12] = 0;

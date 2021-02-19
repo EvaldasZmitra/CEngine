@@ -1,9 +1,9 @@
 1
 _entity_
-cube
-0 0 0
-0 0 0
-100 1 100
+ASD
+0.000000 0.000000 0.000000
+0.000000 0.000000 0.000000
+100.000000 1.000000 100.000000
 ./resources/cube.mesh
 ./resources/brick.dds
 ./resources/shader-vert.glsl
