@@ -50,6 +50,7 @@ typedef struct Entity
 
 } Entity;
 
+void line_cast(float *start, float *end, float *point, Entity *entities);
 char *read_file_stream(FILE *infile);
 char *read_file(const char *file_name);
 char *read_file_binary(const char *file_name);
@@ -92,4 +93,10 @@ void create_mvp(
     float *scale,
     float *view_projection,
     float *out);
+int raycast(float *origin, float *direction, Entity *entities, int num_entities);
+float raycast_plane(float *origin, float *direction);
+int intersect_triangle(
+    float *origin, float *direction,
+    float *v0, float *v1, float *v2,
+    float *distance);
 #endif

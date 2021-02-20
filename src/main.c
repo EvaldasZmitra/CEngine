@@ -65,7 +65,7 @@ void handle_movement(GLFWwindow *window, Camera *camera)
 
         dy = y_pos - y_pos_old;
         pitch -= dy / 100.0;
-        pitch = fmax(fmin(pitch, 89), -89);
+        pitch = fmax(fmin(pitch, 1.5), -1.5);
     }
 
     x_pos_old = x_pos;
@@ -89,28 +89,28 @@ void handle_movement(GLFWwindow *window, Camera *camera)
     camera->forward[1] = new_fwd[1];
     camera->forward[2] = new_fwd[2];
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
         camera->position[0] += new_fwd[0] * 0.1f;
         camera->position[1] += new_fwd[1] * 0.1f;
         camera->position[2] += new_fwd[2] * 0.1f;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
         camera->position[0] -= new_fwd[0] * 0.1f;
         camera->position[1] -= new_fwd[1] * 0.1f;
         camera->position[2] -= new_fwd[2] * 0.1f;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
         camera->position[0] += right[0] * 0.1f;
         camera->position[1] += right[1] * 0.1f;
         camera->position[2] += right[2] * 0.1f;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
         camera->position[0] -= right[0] * 0.1f;
         camera->position[1] -= right[1] * 0.1f;
