@@ -8,9 +8,9 @@
 
 typedef struct Transform
 {
-    float position[3];
-    float rotation[3];
-    float scale[3];
+    float *position;
+    float *rotation;
+    float *scale;
 } Transform;
 
 typedef struct Camera
@@ -45,9 +45,6 @@ typedef struct Entity
 {
     unsigned int texture;
     char *name;
-    float *position;
-    float *rotation;
-    float *scale;
     Transform transform;
     unsigned int shader;
     Mesh *mesh;

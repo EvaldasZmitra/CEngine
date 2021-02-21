@@ -284,14 +284,14 @@ void draw_entity(Entity *entity, Camera camera)
     float m[16] = {0};
     glUseProgram(entity->shader);
     create_mvp(
-        entity->position,
-        entity->rotation,
-        entity->scale,
+        entity->transform.position,
+        entity->transform.rotation,
+        entity->transform.scale,
         view_projection_m,
         mvp);
-    create_transform(entity->position,
-                     entity->rotation,
-                     entity->scale, m);
+    create_transform(entity->transform.position,
+                     entity->transform.rotation,
+                     entity->transform.scale, m);
     uniform_matrix_4x4(entity->shader, mvp, "VP");
     uniform_matrix_4x4(entity->shader, m, "M");
     GLuint TextureID = glGetUniformLocation(entity->shader, "myTextureSampler");
@@ -322,9 +322,9 @@ void save_entities(const char *file_name, Entity *entities, unsigned int num_ent
     {
         fprintf(fp, "_entity_\n");
         fprintf(fp, "ASD\n");
-        write_vec3(fp, entities[i].position);
-        write_vec3(fp, entities[i].rotation);
-        write_vec3(fp, entities[i].scale);
+        write_vec3(fp, entities[i].transform.position);
+        write_vec3(fp, entities[i].transform.rotation);
+        write_vec3(fp, entities[i].transform.scale);
         fprintf(fp, "%s\n", entities[i].mesh->file_name);
         fprintf(fp, "%s\n", entities[i].texture_name);
         fprintf(fp, "%s\n", entities[i].vert_name);
@@ -396,9 +396,9 @@ Entity *load_entities(char *text, int *num_entities)
             free(f_shader_code);
             entities[c].texture = load_dds(texture_file);
             entities[c].name = name;
-            entities[c].position = pos;
-            entities[c].rotation = rot;
-            entities[c].scale = scale;
+            entities[c].transform.position = pos;
+            entities[c].transform.rotation = rot;
+            entities[c].transform.scale = scale;
 
             entities[c].texture_name = texture_file;
             entities[c].vert_name = vshader;
