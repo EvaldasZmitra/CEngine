@@ -6,6 +6,13 @@
 #include "util.h"
 #include <stdio.h>
 
+typedef struct Transform
+{
+    float position[3];
+    float rotation[3];
+    float scale[3];
+} Transform;
+
 typedef struct Camera
 {
     float *position;
@@ -41,6 +48,7 @@ typedef struct Entity
     float *position;
     float *rotation;
     float *scale;
+    Transform transform;
     unsigned int shader;
     Mesh *mesh;
 
@@ -50,6 +58,7 @@ typedef struct Entity
 
 } Entity;
 
+void invert_transform(Transform transform);
 void line_cast(float *start, float *end, float *point, Entity *entities);
 char *read_file_stream(FILE *infile);
 char *read_file(const char *file_name);

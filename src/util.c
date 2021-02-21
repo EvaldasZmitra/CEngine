@@ -2,8 +2,30 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../include/cglm/cglm.h"
 
 const float EPSILON = 0.0000001;
+
+void negate_vec3(float *vec)
+{
+    vec[0] = -vec[0];
+    vec[1] = -vec[1];
+    vec[2] = -vec[2];
+}
+
+void invert_vec3(float *vec)
+{
+    vec[0] = 1 / vec[0];
+    vec[1] = 1 / vec[1];
+    vec[2] = 1 / vec[2];
+}
+
+void invert_transform(Transform transform)
+{
+    negate_vec3(transform.position);
+    negate_vec3(transform.rotation);
+    invert_vec3(transform.scale);
+}
 
 void multiply_vec3(float *v, float s)
 {

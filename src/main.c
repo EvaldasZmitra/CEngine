@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../include/cglm/cglm.h"
 
 int window_width = 512;
 int window_height = 512;
