@@ -23,20 +23,6 @@ typedef struct SceneNode
     void *data;
 } SceneNode;
 
-// void load(void *data)
-// {
-//     StructTypes type;
-//     switch (type)
-//     {
-//     case ENTITY:;
-//         Entity *entity1 = (Entity *)(data);
-//         break;
-
-//     default:
-//         break;
-//     }
-// }
-
 void draw(GLFWwindow *window, Camera camera, SceneNode scene)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -79,9 +65,6 @@ void handle_movement(GLFWwindow *window, Camera *camera)
     float fwd[4] = {0, 0, -1, 0};
     float new_fwd[4] = {0};
     multiply_vec3_by_4x4_matrix(m, fwd, new_fwd);
-    //printf("%f %f %f %f\n", new_fwd[0], new_fwd[1], new_fwd[2], new_fwd[3]);
-    //printf("%f %f %f\n", camera->forward[0], camera->forward[1], camera->forward[2]);
-    //printf("%f %f\n", pitch, yaw);
     normalize_vector3(new_fwd);
     float right[3] = {0};
     cross_vector3(new_fwd, (float[]){0, 1, 0}, right);

@@ -1,10 +1,11 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef RENDERING_H
+#define RENDERING_H
 #define GLEW_STATIC
-#include "../include/GL/glew.h"
-#include "../include/GLFW/glfw3.h"
-#include "util.h"
+#include "../../include/GL/glew.h"
+#include "../../include/GLFW/glfw3.h"
 #include <stdio.h>
+#include "../math/linear_algebra.h"
+#include "../math/geometry.h"
 
 typedef struct Transform
 {
@@ -73,26 +74,6 @@ Camera create_default_camera();
 void load_mesh_to_gpu(Mesh *mesh);
 Entity *load_entities(char *text, int *num_entities);
 void save_entities(const char *file_name, Entity *entities, unsigned int num_entities);
-void set_4x4_matrix_position(float *matrix, float x, float y, float z);
-void set_4x4_matrix_scale(float *matrix, float x, float y, float z);
-void quaterion_to_4x4_matrix(float *q, float *out);
-void multiply_4x4_matrices(float *m1, float *m2, float *out);
-void multiply_vec3_by_4x4_matrix(float *m, float *v, float *o);
-void print_4x4_matrix(float *m);
-/*
- * Pitch, yaw, roll
-*/
-void euler_to_quaternion(float *e, float *out);
-void quaternion_to_euler(float *q, float *out);
-float inverse_square_root(float number);
-void normalize_vector3(float *v);
-void cross_vector3(float *v1, float *v2, float *out);
-void subtract_vector3(float *v1, float *v2);
-void add_vector3(float *v1, float *v2);
-float dot_vector3(float *v1, float *v2);
-void create_projection(float fov, float aspect, float zNear, float zFar, float *out);
-void create_view(float *pos, float *fwd, float *up, float *out);
-void create_transform(float *position, float *rotation, float *scale, float *out);
 void create_mvp(
     float *position,
     float *rotation,
@@ -100,9 +81,4 @@ void create_mvp(
     float *view_projection,
     float *out);
 int raycast(float *origin, float *direction, Entity *entities, int num_entities);
-float raycast_plane(float *origin, float *direction);
-int intersect_triangle(
-    float *origin, float *direction,
-    float *v0, float *v1, float *v2,
-    float *distance);
 #endif
